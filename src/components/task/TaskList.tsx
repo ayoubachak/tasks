@@ -15,6 +15,7 @@ import { ViewSwitcher } from '@/components/filters/ViewSwitcher';
 import { BoardView } from '@/components/views/BoardView';
 import { CalendarView } from '@/components/views/CalendarView';
 import { SortableListView } from '@/components/views/SortableListView';
+import { StatsDashboard } from '@/components/analytics/StatsDashboard';
 import { BulkActionsBar } from '@/components/bulk/BulkActionsBar';
 
 export function TaskList() {
@@ -110,6 +111,8 @@ export function TaskList() {
         return <BoardView tasks={filteredTasks} onEditTask={handleEditTask} />;
       case 'calendar':
         return <CalendarView tasks={filteredTasks} onEditTask={handleEditTask} />;
+      case 'analytics':
+        return <StatsDashboard />;
       case 'list':
       default:
         // Use sortable list when no filters/search are active for drag & drop reordering

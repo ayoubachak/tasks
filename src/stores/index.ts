@@ -6,4 +6,5 @@ export * from './viewStore';
 export * from './shortcutStore';
 export * from './templateStore';
 export * from './selectionStore';
+export * from './backupStore';
 

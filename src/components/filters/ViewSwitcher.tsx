@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button';
-import { List, LayoutGrid, Calendar } from 'lucide-react';
+import { List, LayoutGrid, Calendar, BarChart3 } from 'lucide-react';
 import { useViewStore } from '@/stores/viewStore';
 import type { ViewType } from '@/types/filter';
 import { cn } from '@/lib/utils';
@@ -8,6 +8,7 @@ const views: Array<{ value: ViewType; label: string; icon: React.ComponentType<{
   { value: 'list', label: 'List', icon: List },
   { value: 'board', label: 'Board', icon: LayoutGrid },
   { value: 'calendar', label: 'Calendar', icon: Calendar },
+  { value: 'analytics', label: 'Analytics', icon: BarChart3 },
 ];
 
 export function ViewSwitcher() {
