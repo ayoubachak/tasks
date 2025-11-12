@@ -54,7 +54,7 @@ function DraggableTask({ task, onEdit }: DraggableTaskProps) {
 
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition,
+    transition: isDragging ? 'none' : transition, // Disable transition during drag for better performance
     opacity: isDragging ? 0.5 : 1,
   };
 
@@ -147,6 +147,13 @@ export function BoardView({ tasks, onEditTask }: BoardViewProps) {
   const { updateTask } = useTaskStore();
   const [activeTask, setActiveTask] = useState<Task | null>(null);
 
+  // Create a map for O(1) task lookups instead of O(n) array.find()
+  const taskMap = useMemo(() => {
+    const map = new Map<string, Task>();
+    tasks.forEach((task) => map.set(task.id, task));
+    return map;
+  }, [tasks]);
+
   const tasksByStatus = useMemo(() => {
     const grouped: Record<TaskStatus, Task[]> = {
       todo: [],
@@ -168,7 +175,7 @@ export function BoardView({ tasks, onEditTask }: BoardViewProps) {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8, // Require 8px of movement before dragging starts
+        distance: 3, // Reduced from 8px for faster activation
       },
     }),
     useSensor(KeyboardSensor)
@@ -176,7 +183,7 @@ export function BoardView({ tasks, onEditTask }: BoardViewProps) {
 
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
-    const task = tasks.find((t) => t.id === active.id);
+    const task = taskMap.get(active.id as string);
     setActiveTask(task || null);
   };
 
@@ -187,7 +194,7 @@ export function BoardView({ tasks, onEditTask }: BoardViewProps) {
     if (!over) return;
 
     const taskId = active.id as string;
-    const task = tasks.find((t) => t.id === taskId);
+    const task = taskMap.get(taskId);
     if (!task) return;
 
     const overId = over.id as string;
@@ -198,7 +205,7 @@ export function BoardView({ tasks, onEditTask }: BoardViewProps) {
       targetStatus = overId.replace('column-', '') as TaskStatus;
     } else {
       // Check if dropped on another task (get its status)
-      const overTask = tasks.find((t) => t.id === overId);
+      const overTask = taskMap.get(overId);
       if (overTask) {
         targetStatus = overTask.status;
       }
@@ -242,9 +249,9 @@ export function BoardView({ tasks, onEditTask }: BoardViewProps) {
       </div>
 
       {/* Drag Overlay - Shows the task being dragged */}
-      <DragOverlay>
+      <DragOverlay dropAnimation={null}>
         {activeTask ? (
-          <div className="bg-card rounded-lg border p-3 shadow-2xl ring-2 ring-primary rotate-3 opacity-95 max-w-[350px]">
+          <div className="bg-card rounded-lg border p-3 shadow-2xl ring-2 ring-primary rotate-3 opacity-95 max-w-[350px] pointer-events-none">
             <TaskItem task={activeTask} onEdit={() => {}} />
           </div>
         ) : null}
