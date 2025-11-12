@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -15,8 +15,9 @@ export function MarkdownViewer({ content, className }: MarkdownViewerProps) {
   const { getImageData, updateLastUsed } = useImageStore();
   
   // Process content: resolve image references and handle legacy data URIs
-  const { processedContent, imageMap } = useMemo(() => {
+  const { processedContent, imageMap, imageIds } = useMemo(() => {
     const map = new Map<string, { src: string; alt: string }>();
+    const ids: string[] = [];
     let processed = content;
     let imageIndex = 0;
 
@@ -35,8 +36,7 @@ export function MarkdownViewer({ content, className }: MarkdownViewerProps) {
           ref: match[2],
           id,
         });
-        // Update last used timestamp
-        updateLastUsed(id);
+        ids.push(id); // Collect IDs to update later
       }
     }
 
@@ -74,8 +74,15 @@ export function MarkdownViewer({ content, className }: MarkdownViewerProps) {
       imageIndex++;
     }
 
-    return { processedContent: processed, imageMap: map };
-  }, [content, getImageData, updateLastUsed]);
+    return { processedContent: processed, imageMap: map, imageIds: ids };
+  }, [content, getImageData]);
+
+  // Update last used timestamps after render (not during)
+  useEffect(() => {
+    imageIds.forEach((id) => {
+      updateLastUsed(id);
+    });
+  }, [imageIds, updateLastUsed]);
 
   const components: Components = {
     code({ node, inline, className: codeClassName, children, ...props }) {
@@ -102,13 +109,9 @@ export function MarkdownViewer({ content, className }: MarkdownViewerProps) {
       if (src && src.startsWith('IMAGE_PLACEHOLDER_')) {
         const imageData = imageMap.get(src);
         if (imageData) {
-          console.log('Rendering extracted image:', {
-            alt: imageData.alt,
-            srcLength: imageData.src.length,
-            placeholder: src,
-          });
+          // Use a span with display block instead of div (valid inside <p>)
           return (
-            <div className="my-4">
+            <span className="block my-4">
               <img
                 src={imageData.src}
                 alt={imageData.alt || 'Image'}
@@ -119,10 +122,10 @@ export function MarkdownViewer({ content, className }: MarkdownViewerProps) {
                   e.currentTarget.style.display = 'none';
                 }}
                 onLoad={() => {
-                  console.log('Extracted image loaded successfully');
+                  // console.log('Extracted image loaded successfully');
                 }}
               />
-            </div>
+            </span>
           );
         } else {
           console.warn('Placeholder not found in map:', src);
@@ -136,8 +139,9 @@ export function MarkdownViewer({ content, className }: MarkdownViewerProps) {
       
       // Handle base64 images (data URIs) that react-markdown managed to parse
       if (src.startsWith('data:')) {
+        // Use a span with display block instead of div (valid inside <p>)
         return (
-          <div className="my-4">
+          <span className="block my-4">
             <img
               src={src}
               alt={alt || 'Image'}
@@ -148,17 +152,17 @@ export function MarkdownViewer({ content, className }: MarkdownViewerProps) {
                 e.currentTarget.style.display = 'none';
               }}
               onLoad={() => {
-                console.log('Image loaded successfully');
+                // console.log('Image loaded successfully');
               }}
               {...props}
             />
-          </div>
+          </span>
         );
       }
       
       // Handle regular URLs
       return (
-        <div className="my-4">
+        <span className="block my-4">
           <img
             src={src}
             alt={alt || 'Image'}
@@ -170,7 +174,7 @@ export function MarkdownViewer({ content, className }: MarkdownViewerProps) {
             }}
             {...props}
           />
-        </div>
+        </span>
       );
     },
     a({ node, href, children, ...props }) {
@@ -189,7 +193,7 @@ export function MarkdownViewer({ content, className }: MarkdownViewerProps) {
   };
 
   return (
-    <div className={`prose prose-sm dark:prose-invert max-w-none ${className || ''}`}>
+    <div className={`prose prose-lg dark:prose-invert max-w-none ${className || ''}`} style={{ fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif' }}>
       <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
         {processedContent}
       </ReactMarkdown>

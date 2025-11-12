@@ -163,10 +163,23 @@ export const useTemplateStore = create<TemplateState>()(
           usageCount: template.usageCount + 1,
         });
 
+        // Get workspaceId from task
+        const { useTaskStore } = require('./taskStore');
+        const taskStore = useTaskStore.getState();
+        const task = taskStore.getTask(taskId);
+        const workspaceId = task?.workspaceId;
+        
+        if (!workspaceId) {
+          console.error('Cannot create note from template: task not found or has no workspaceId');
+          return null;
+        }
+        
         // Return note structure
         return {
           id: nanoid(),
+          workspaceId,
           taskId,
+          title: template.name || 'Untitled Note',
           content: template.content,
           version: 1,
           images: [],

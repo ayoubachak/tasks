@@ -43,9 +43,9 @@ export function NoteEditorView() {
     }
 
     if (note) {
-      updateNote(task.id, note.id, content);
+      updateNote(note.id, content, undefined, task.id);
     } else {
-      addNote(task.id, content);
+      addNote(task.workspaceId, task.id, content, 'Untitled Note');
     }
     navigateBack();
   };
@@ -56,14 +56,14 @@ export function NoteEditorView() {
 
   const handleDelete = () => {
     if (note && confirm('Are you sure you want to delete this note?')) {
-      deleteNote(task.id, note.id);
+      deleteNote(note.id, task.id);
       navigateBack();
     }
   };
 
   const handlePin = () => {
     if (note) {
-      pinNote(task.id, note.id, !note.pinned);
+      pinNote(note.id, !note.pinned, task.id);
     }
   };
 

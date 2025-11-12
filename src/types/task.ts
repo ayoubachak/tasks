@@ -29,7 +29,9 @@ export interface ImageData {
 
 export interface Note {
   id: string;
-  taskId: string;
+  workspaceId: string; // Notes belong to a workspace, just like tasks
+  taskId?: string; // Optional - notes can be standalone or linked to a task
+  title: string; // Note title (separate from task title)
   content: string; // Markdown
   version: number;
   previousVersionId?: string;

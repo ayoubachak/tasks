@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { useImagePaste } from '@/hooks/useImagePaste';
 import { useImageStore, createImageReference } from '@/stores';
@@ -17,7 +17,13 @@ interface MarkdownEditorProps {
   showToolbar?: boolean;
 }
 
-export function MarkdownEditor({
+export interface MarkdownEditorRef {
+  getValue: () => string;
+  setValue: (value: string) => void;
+  focus: () => void;
+}
+
+export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>(({
   value,
   onChange,
   placeholder = 'Write your notes in Markdown...',
@@ -25,15 +31,60 @@ export function MarkdownEditor({
   className,
   rows = 10,
   showToolbar = false,
-}: MarkdownEditorProps) {
+}, ref) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const isInternalUpdate = useRef(false);
+  const lastSyncedValueRef = useRef<string>(value);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const { storeImage } = useImageStore();
   
-  // Use value directly - this is a controlled component
-  const content = value;
+  // Expose methods via ref
+  useImperativeHandle(ref, () => ({
+    getValue: () => textareaRef.current?.value || '',
+    setValue: (newValue: string) => {
+      if (textareaRef.current) {
+        textareaRef.current.value = newValue;
+        lastSyncedValueRef.current = newValue;
+      }
+    },
+    focus: () => {
+      textareaRef.current?.focus();
+    },
+  }));
 
-  const handleImagePaste = (image: PasteImageResult) => {
+  // Sync external value changes to textarea (but don't trigger onChange)
+  useEffect(() => {
+    if (textareaRef.current && value !== lastSyncedValueRef.current) {
+      const textarea = textareaRef.current;
+      const cursorPos = textarea.selectionStart;
+      textarea.value = value;
+      lastSyncedValueRef.current = value;
+      // Restore cursor position
+      textarea.setSelectionRange(cursorPos, cursorPos);
+    }
+  }, [value]);
+
+  // Debounced onChange - only sync to parent after user stops typing
+  const syncToParent = useCallback((newValue: string) => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    
+    debounceTimerRef.current = setTimeout(() => {
+      lastSyncedValueRef.current = newValue;
+      onChange(newValue);
+    }, 150); // Short debounce for responsiveness
+  }, [onChange]);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
+
+  const handleImagePaste = useCallback((image: PasteImageResult) => {
     // Ensure we have valid image data
     if (!image.data || image.data.trim() === '') {
       console.warn('Invalid image data - cannot insert');
@@ -48,7 +99,10 @@ export function MarkdownEditor({
     
     // Get cursor position for insertion
     const textarea = textareaRef.current;
-    const cursorPos = textarea?.selectionStart ?? undefined;
+    if (!textarea) return;
+    
+    const cursorPos = textarea.selectionStart;
+    const currentValue = textarea.value;
     
     // Store image and get short reference ID
     const imageId = storeImage(
@@ -65,42 +119,26 @@ export function MarkdownEditor({
     const imageReference = createImageReference(imageId);
     const imageMarkdown = `\n\n![${alt}](${imageReference})\n\n`;
     
-    // Debug: Log image insertion
-    console.log('Inserting image with reference:', {
-      alt,
-      imageId,
-      reference: imageReference,
-      dataLength: image.data.length,
-    });
+    // Insert image at cursor position
+    const before = currentValue.slice(0, cursorPos);
+    const after = currentValue.slice(cursorPos);
+    const newContent = before + imageMarkdown + after;
     
-    // Insert image at cursor position or append
-    let newContent: string;
-    if (cursorPos !== undefined && textarea) {
-      const before = content.slice(0, cursorPos);
-      const after = content.slice(cursorPos);
-      newContent = before + imageMarkdown + after;
-    } else {
-      // Append to end
-      newContent = content ? `${content}${imageMarkdown}` : imageMarkdown.trim();
-    }
+    // Update textarea directly (uncontrolled)
+    textarea.value = newContent;
+    lastSyncedValueRef.current = newContent;
     
-    // Update parent immediately
-    isInternalUpdate.current = true;
+    // Restore cursor position
+    const newPos = cursorPos + imageMarkdown.length;
+    textarea.setSelectionRange(newPos, newPos);
+    textarea.focus();
+    
+    // Sync to parent immediately for images
     onChange(newContent);
-    console.log('Content updated, new length:', newContent.length, 'contains image reference:', newContent.includes('image:'));
-    
-    // Restore cursor position after content updates
-    setTimeout(() => {
-      if (textarea) {
-        const newPos = cursorPos !== undefined ? cursorPos + imageMarkdown.length : newContent.length;
-        textarea.setSelectionRange(newPos, newPos);
-        textarea.focus();
-      }
-    }, 0);
     
     // Also notify parent if callback provided
     onImagePaste?.(image);
-  };
+  }, [onChange, onImagePaste, storeImage]);
 
   const { handlePaste } = useImagePaste(handleImagePaste, {
     maxSize: 5 * 1024 * 1024, // 5MB
@@ -174,16 +212,21 @@ export function MarkdownEditor({
 
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
-    const selectedText = textarea.value.substring(start, end);
+    const currentValue = textarea.value;
+    const selectedText = currentValue.substring(start, end);
     const placeholderText = placeholder || selectedText;
 
-    const beforeText = content.substring(0, start);
-    const afterText = content.substring(end);
+    const beforeText = currentValue.substring(0, start);
+    const afterText = currentValue.substring(end);
 
     const newText = beforeText + before + placeholderText + after + afterText;
     const newCursorPos = start + before.length + placeholderText.length + after.length;
 
-    isInternalUpdate.current = true;
+    // Update textarea directly
+    textarea.value = newText;
+    lastSyncedValueRef.current = newText;
+    
+    // Sync to parent
     onChange(newText);
     
     setTimeout(() => {
@@ -204,7 +247,7 @@ export function MarkdownEditor({
           onImageUpload={handleToolbarImageUpload}
         />
       )}
-      <div className="flex-1 flex flex-col min-h-0">
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
         {!showToolbar && (
           <div className="mb-2 flex items-center justify-between flex-shrink-0">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -240,22 +283,35 @@ export function MarkdownEditor({
             id="image-upload"
           />
         )}
-        <div className="flex-1 min-h-0 flex flex-col border rounded-md bg-background overflow-hidden">
+        <div className="flex-1 min-h-0 flex flex-col border rounded-md bg-background overflow-hidden" style={{ height: 0 }}>
           <Textarea
             ref={textareaRef}
-            value={content}
+            defaultValue={value}
             onChange={(e) => {
-              isInternalUpdate.current = true;
-              onChange(e.target.value);
+              // Uncontrolled: typing doesn't trigger React re-renders
+              // Only sync to parent debounced
+              const newValue = e.target.value;
+              syncToParent(newValue);
+            }}
+            onBlur={(e) => {
+              // Sync immediately on blur to ensure we don't lose data
+              const newValue = e.target.value;
+              if (debounceTimerRef.current) {
+                clearTimeout(debounceTimerRef.current);
+              }
+              lastSyncedValueRef.current = newValue;
+              onChange(newValue);
             }}
             placeholder={placeholder}
             rows={rows}
-            className="font-mono text-sm w-full resize-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none rounded-md flex-1 min-h-0"
+            className="prose prose-lg dark:prose-invert max-w-none w-full resize-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none rounded-md text-base leading-relaxed"
             style={{ 
-              minHeight: `${rows * 1.5}rem`,
               height: '100%',
+              minHeight: 0,
               overflowY: 'auto',
               overflowX: 'hidden',
+              boxSizing: 'border-box',
+              fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif',
             }}
           />
         </div>
@@ -267,5 +323,7 @@ export function MarkdownEditor({
       </div>
     </div>
   );
-}
+});
+
+MarkdownEditor.displayName = 'MarkdownEditor';
 

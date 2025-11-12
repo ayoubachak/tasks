@@ -9,6 +9,7 @@ import type { Task, TaskStatus, Priority, Subtask, Note, ImageData, RecurrenceRu
 
 interface TaskState {
   tasks: Task[];
+  standaloneNotes: Note[]; // Notes that are not linked to any task
   
   // Actions
   createTask: (
@@ -26,10 +27,17 @@ interface TaskState {
   deleteSubtask: (taskId: string, subtaskId: string) => void;
   toggleSubtask: (taskId: string, subtaskId: string) => void;
   calculateTaskProgress: (taskId: string) => number;
-  addNote: (taskId: string, content: string, images?: ImageData[]) => Note;
-  updateNote: (taskId: string, noteId: string, content: string) => void;
-  deleteNote: (taskId: string, noteId: string) => void;
-  pinNote: (taskId: string, noteId: string, pinned: boolean) => void;
+  // Note actions (can work with task notes or standalone notes)
+  addNote: (workspaceId: string, taskId: string | null, content: string, title?: string, images?: ImageData[]) => Note;
+  updateNote: (noteId: string, content: string, title?: string, taskId?: string) => void;
+  deleteNote: (noteId: string, taskId?: string) => void;
+  pinNote: (noteId: string, pinned: boolean, taskId?: string) => void;
+  linkNoteToTask: (noteId: string, taskId: string) => void;
+  unlinkNoteFromTask: (noteId: string, taskId: string) => void;
+  getAllNotes: () => Note[]; // Get all notes (standalone + task notes)
+  getNotesByWorkspace: (workspaceId: string) => Note[]; // Get all notes in a workspace
+  getNote: (noteId: string) => Note | undefined; // Find note in tasks or standalone
+  deleteNotesByWorkspace: (workspaceId: string) => void; // Delete all notes in a workspace
   
   // Dependencies
   addDependency: (taskId: string, dependencyId: string) => void;
@@ -85,6 +93,7 @@ export const useTaskStore = create<TaskState>()(
   persist(
     (set, get) => ({
       tasks: [],
+      standaloneNotes: [],
 
       createTask: (workspaceId: string, title: string, description = '') => {
         const task = createDefaultTask(workspaceId, title, description);
@@ -118,9 +127,18 @@ export const useTaskStore = create<TaskState>()(
       },
 
       deleteTask: (id: string) => {
-        set((state) => ({
-          tasks: state.tasks.filter((task) => task.id !== id),
-        }));
+        set((state) => {
+          // Find the task being deleted
+          const taskToDelete = state.tasks.find((task) => task.id === id);
+          
+          // Notes that are linked to this task will be deleted with the task
+          // (they're stored in task.notes, so they'll be removed when the task is removed)
+          // Standalone notes are unaffected
+          
+          return {
+            tasks: state.tasks.filter((task) => task.id !== id),
+          };
+        });
       },
 
       toggleTaskStatus: (id: string) => {
@@ -310,11 +328,13 @@ export const useTaskStore = create<TaskState>()(
         return calculateNestedProgress(tree);
       },
 
-      addNote: (taskId: string, content: string, images: ImageData[] = []) => {
+      addNote: (workspaceId: string, taskId: string | null, content: string, title: string = 'Untitled Note', images: ImageData[] = []) => {
         const now = Date.now();
         const note: Note = {
           id: nanoid(),
-          taskId,
+          workspaceId,
+          ...(taskId && { taskId }),
+          title,
           content,
           version: 1,
           images,
@@ -324,102 +344,337 @@ export const useTaskStore = create<TaskState>()(
           tags: [],
         };
 
-        set((state) => ({
-          tasks: state.tasks.map((task) => {
-            if (task.id === taskId) {
-              return {
-                ...task,
-                notes: [...task.notes, note],
-                updatedAt: Date.now(),
-              };
-            }
-            return task;
-          }),
-        }));
+        set((state) => {
+          if (taskId) {
+            // Add to task
+            return {
+              tasks: state.tasks.map((task) => {
+                if (task.id === taskId) {
+                  return {
+                    ...task,
+                    notes: [...task.notes, note],
+                    updatedAt: Date.now(),
+                  };
+                }
+                return task;
+              }),
+            };
+          } else {
+            // Add as standalone note
+            return {
+              standaloneNotes: [...state.standaloneNotes, note],
+            };
+          }
+        });
 
         return note;
       },
 
-      updateNote: (taskId: string, noteId: string, content: string) => {
+      updateNote: (noteId: string, content: string, title?: string, taskId?: string) => {
         set((state) => {
+          // Try to find note in tasks first
+          let foundNote: Note | undefined;
+          let foundInTask = false;
+
           const updatedTasks = state.tasks.map((task) => {
-            if (task.id === taskId) {
-              const notes = task.notes.map((note) => {
-                if (note.id === noteId) {
-                  // Save current version to history before updating
-                  const historyStore = useNoteHistoryStore.getState();
-                  historyStore.saveVersion(note);
-                  
+            const note = task.notes.find((n) => n.id === noteId);
+            if (note) {
+              foundNote = note;
+              foundInTask = true;
+              // Save current version to history before updating
+              const historyStore = useNoteHistoryStore.getState();
+              historyStore.saveVersion(note);
+              
+              const updatedNotes = task.notes.map((n) => {
+                if (n.id === noteId) {
                   return {
-                    ...note,
+                    ...n,
                     content,
-                    version: note.version + 1,
-                    previousVersionId: note.id,
+                    ...(title !== undefined && { title }),
+                    version: n.version + 1,
+                    previousVersionId: n.id,
                     updatedAt: Date.now(),
                   };
                 }
-                return note;
+                return n;
               });
+              
               return {
                 ...task,
-                notes,
+                notes: updatedNotes,
                 updatedAt: Date.now(),
               };
             }
             return task;
           });
-          
-          // Save new version to history
-          const task = updatedTasks.find((t) => t.id === taskId);
-          if (task) {
-            const note = task.notes.find((n) => n.id === noteId);
-            if (note) {
-              const historyStore = useNoteHistoryStore.getState();
-              historyStore.saveVersion(note);
+
+          if (foundInTask && foundNote) {
+            // Save new version to history
+            const task = updatedTasks.find((t) => t.id === foundNote?.taskId);
+            if (task) {
+              const note = task.notes.find((n) => n.id === noteId);
+              if (note) {
+                const historyStore = useNoteHistoryStore.getState();
+                historyStore.saveVersion(note);
+              }
             }
+            return { tasks: updatedTasks };
           }
-          
-          return { tasks: updatedTasks };
+
+          // Note not found in tasks, try standalone notes
+          const note = state.standaloneNotes.find((n) => n.id === noteId);
+          if (note) {
+            // Save current version to history before updating
+            const historyStore = useNoteHistoryStore.getState();
+            historyStore.saveVersion(note);
+            
+            const updatedNote = {
+              ...note,
+              content,
+              ...(title !== undefined && { title }),
+              version: note.version + 1,
+              previousVersionId: note.id,
+              updatedAt: Date.now(),
+            };
+
+            // Save new version to history
+            historyStore.saveVersion(updatedNote);
+
+            return {
+              standaloneNotes: state.standaloneNotes.map((n) =>
+                n.id === noteId ? updatedNote : n
+              ),
+            };
+          }
+
+          return state;
         });
       },
 
-      deleteNote: (taskId: string, noteId: string) => {
-        set((state) => ({
-          tasks: state.tasks.map((task) => {
-            if (task.id === taskId) {
-              return {
-                ...task,
-                notes: task.notes.filter((note) => note.id !== noteId),
-                updatedAt: Date.now(),
-              };
+      deleteNote: (noteId: string, taskId?: string) => {
+        set((state) => {
+          if (taskId) {
+            // Delete from specific task
+            return {
+              tasks: state.tasks.map((task) => {
+                if (task.id === taskId) {
+                  return {
+                    ...task,
+                    notes: task.notes.filter((note) => note.id !== noteId),
+                    updatedAt: Date.now(),
+                  };
+                }
+                return task;
+              }),
+            };
+          } else {
+            // Try to find and delete from tasks first
+            let foundInTask = false;
+            const updatedTasks = state.tasks.map((task) => {
+              const hasNote = task.notes.some((note) => note.id === noteId);
+              if (hasNote) {
+                foundInTask = true;
+                return {
+                  ...task,
+                  notes: task.notes.filter((note) => note.id !== noteId),
+                  updatedAt: Date.now(),
+                };
+              }
+              return task;
+            });
+
+            if (foundInTask) {
+              return { tasks: updatedTasks };
             }
-            return task;
-          }),
-        }));
+
+            // Delete from standalone notes
+            return {
+              standaloneNotes: state.standaloneNotes.filter((note) => note.id !== noteId),
+            };
+          }
+        });
       },
 
-      pinNote: (taskId: string, noteId: string, pinned: boolean) => {
-        set((state) => ({
-          tasks: state.tasks.map((task) => {
-            if (task.id === taskId) {
-              const notes = task.notes.map((note) =>
+      pinNote: (noteId: string, pinned: boolean, taskId?: string) => {
+        set((state) => {
+          if (taskId) {
+            // Pin/unpin in specific task
+            return {
+              tasks: state.tasks.map((task) => {
+                if (task.id === taskId) {
+                  const notes = task.notes.map((note) =>
+                    note.id === noteId ? { ...note, pinned } : note
+                  );
+                  // Sort: pinned notes first
+                  notes.sort((a, b) => {
+                    if (a.pinned && !b.pinned) return -1;
+                    if (!a.pinned && b.pinned) return 1;
+                    return b.createdAt - a.createdAt;
+                  });
+                  return {
+                    ...task,
+                    notes,
+                    updatedAt: Date.now(),
+                  };
+                }
+                return task;
+              }),
+            };
+          } else {
+            // Try to find in tasks first
+            let foundInTask = false;
+            const updatedTasks = state.tasks.map((task) => {
+              const note = task.notes.find((n) => n.id === noteId);
+              if (note) {
+                foundInTask = true;
+                const notes = task.notes.map((n) =>
+                  n.id === noteId ? { ...n, pinned } : n
+                );
+                notes.sort((a, b) => {
+                  if (a.pinned && !b.pinned) return -1;
+                  if (!a.pinned && b.pinned) return 1;
+                  return b.createdAt - a.createdAt;
+                });
+                return {
+                  ...task,
+                  notes,
+                  updatedAt: Date.now(),
+                };
+              }
+              return task;
+            });
+
+            if (foundInTask) {
+              return { tasks: updatedTasks };
+            }
+
+            // Pin/unpin standalone note
+            return {
+              standaloneNotes: state.standaloneNotes.map((note) =>
                 note.id === noteId ? { ...note, pinned } : note
-              );
-              // Sort: pinned notes first
-              notes.sort((a, b) => {
-                if (a.pinned && !b.pinned) return -1;
-                if (!a.pinned && b.pinned) return 1;
-                return b.createdAt - a.createdAt;
-              });
+              ),
+            };
+          }
+        });
+      },
+
+      linkNoteToTask: (noteId: string, taskId: string) => {
+        set((state) => {
+          // Find note in standalone notes
+          const note = state.standaloneNotes.find((n) => n.id === noteId);
+          if (note) {
+            // Remove from standalone and add to task
+            const linkedNote = { ...note, taskId };
+            return {
+              standaloneNotes: state.standaloneNotes.filter((n) => n.id !== noteId),
+              tasks: state.tasks.map((task) => {
+                if (task.id === taskId) {
+                  return {
+                    ...task,
+                    notes: [...task.notes, linkedNote],
+                    updatedAt: Date.now(),
+                  };
+                }
+                return task;
+              }),
+            };
+          }
+          return state;
+        });
+      },
+
+      unlinkNoteFromTask: (noteId: string, taskId: string) => {
+        set((state) => {
+          // Find note in task
+          let noteToUnlink: Note | undefined;
+          const updatedTasks = state.tasks.map((task) => {
+            if (task.id === taskId) {
+              const note = task.notes.find((n) => n.id === noteId);
+              if (note) {
+                noteToUnlink = note;
+                return {
+                  ...task,
+                  notes: task.notes.filter((n) => n.id !== noteId),
+                  updatedAt: Date.now(),
+                };
+              }
+            }
+            return task;
+          });
+
+          if (noteToUnlink) {
+            // Remove taskId and add to standalone
+            const { taskId: _, ...standaloneNote } = noteToUnlink;
+            return {
+              tasks: updatedTasks,
+              standaloneNotes: [...state.standaloneNotes, standaloneNote],
+            };
+          }
+
+          return state;
+        });
+      },
+
+      getAllNotes: () => {
+        const state = get();
+        const taskNotes = state.tasks.flatMap((task) => task.notes);
+        return [...state.standaloneNotes, ...taskNotes];
+      },
+
+      getNotesByWorkspace: (workspaceId: string) => {
+        const state = get();
+        const taskNotes = state.tasks
+          .filter((task) => task.workspaceId === workspaceId)
+          .flatMap((task) => task.notes);
+        const standaloneNotes = state.standaloneNotes.filter((note) => note.workspaceId === workspaceId);
+        return [...standaloneNotes, ...taskNotes];
+      },
+
+      getNote: (noteId: string) => {
+        const state = get();
+        // Check standalone notes first
+        const standaloneNote = state.standaloneNotes.find((n) => n.id === noteId);
+        if (standaloneNote) return standaloneNote;
+        
+        // Check task notes
+        for (const task of state.tasks) {
+          const note = task.notes.find((n) => n.id === noteId);
+          if (note) return note;
+        }
+        
+        return undefined;
+      },
+
+      deleteNotesByWorkspace: (workspaceId: string) => {
+        set((state) => {
+          // Delete standalone notes in this workspace
+          const remainingStandaloneNotes = state.standaloneNotes.filter(
+            (note) => note.workspaceId !== workspaceId
+          );
+
+          // Delete task notes in this workspace (they're stored in task.notes, so we need to remove them from tasks)
+          const updatedTasks = state.tasks.map((task) => {
+            if (task.workspaceId === workspaceId) {
+              // Remove all notes from tasks in this workspace
               return {
                 ...task,
-                notes,
+                notes: [],
                 updatedAt: Date.now(),
               };
             }
-            return task;
-          }),
-        }));
+            // For tasks in other workspaces, remove notes that belong to the deleted workspace
+            return {
+              ...task,
+              notes: task.notes.filter((note) => note.workspaceId !== workspaceId),
+              updatedAt: Date.now(),
+            };
+          });
+
+          return {
+            tasks: updatedTasks,
+            standaloneNotes: remainingStandaloneNotes,
+          };
+        });
       },
 
       addDependency: (taskId: string, dependencyId: string) => {

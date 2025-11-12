@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { nanoid } from 'nanoid';
+import { useTaskStore } from './taskStore';
 import type { Workspace, WorkspaceSettings } from '@/types';
 
 interface WorkspaceState {
@@ -61,6 +62,16 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       },
 
       deleteWorkspace: (id: string) => {
+        // Get taskStore to delete notes and tasks
+        const taskStore = useTaskStore.getState();
+        
+        // Delete all tasks in this workspace (this will also delete task notes)
+        const tasks = taskStore.getTasksByWorkspace(id);
+        tasks.forEach((task) => taskStore.deleteTask(task.id));
+        
+        // Delete all standalone notes in this workspace
+        taskStore.deleteNotesByWorkspace(id);
+        
         set((state) => ({
           workspaces: state.workspaces.filter((ws) => ws.id !== id),
           activeWorkspaceId:

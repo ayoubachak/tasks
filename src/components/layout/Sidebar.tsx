@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useWorkspaceStore, useTaskStore } from '@/stores';
-import { Plus, Folder, MoreVertical, Edit, Trash2, Palette } from 'lucide-react';
+import { Plus, Folder, MoreVertical, Edit, Trash2, Palette, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
@@ -30,7 +30,12 @@ const colorPresets = [
   '#a855f7', // violet
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
+}
+
+export function Sidebar({ collapsed = false, onToggleCollapse }: SidebarProps) {
   const { workspaces, activeWorkspaceId, setActiveWorkspace, updateWorkspace, deleteWorkspace, setActiveWorkspace: setActive } = useWorkspaceStore();
   const { getTasksByWorkspace, deleteTask } = useTaskStore();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -92,25 +97,52 @@ export function Sidebar() {
 
   return (
     <aside 
-      className="hidden md:flex w-64 border-r bg-muted/40 flex-col"
+      className={cn(
+        'hidden md:flex border-r bg-muted/40 flex-col transition-all duration-300 relative group',
+        collapsed ? 'w-16' : 'w-64'
+      )}
       aria-label="Workspace navigation"
     >
-      <div className="flex h-16 items-center justify-between px-4">
-        <h2 className="font-semibold">Workspaces</h2>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={handleCreateWorkspace}
-          title="Create workspace"
-          aria-label="Create new workspace"
-        >
-          <Plus className="h-4 w-4" />
-        </Button>
+      <div className={cn(
+        "flex h-16 items-center transition-all",
+        collapsed ? "px-2 justify-center" : "px-4 justify-between"
+      )}>
+        {!collapsed && <h2 className="font-semibold">Workspaces</h2>}
+        <div className="flex items-center gap-1">
+          {!collapsed && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleCreateWorkspace}
+              title="Create workspace"
+              aria-label="Create new workspace"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          )}
+          <Button
+            variant={collapsed ? "default" : "ghost"}
+            size="icon"
+            onClick={onToggleCollapse}
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            className={cn(
+              "transition-all z-10",
+              collapsed && "bg-primary text-primary-foreground hover:bg-primary/90 hover:scale-110 hover:shadow-lg"
+            )}
+          >
+            {collapsed ? (
+              <ChevronRight className="h-5 w-5" />
+            ) : (
+              <ChevronLeft className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
       </div>
       <Separator />
       <ScrollArea className="h-[calc(100vh-4rem)]">
-        <div className="p-2">
-          {workspaces.length === 0 ? (
+        <div className={cn("p-2", collapsed && "px-1")}>
+          {!collapsed && workspaces.length === 0 ? (
             <div className="p-4 text-center text-sm text-muted-foreground">
               No workspaces yet. Create one to get started!
             </div>
@@ -119,123 +151,189 @@ export function Sidebar() {
               {workspaces.map((workspace, index) => (
                 <div
                   key={workspace.id}
-                  className={`group flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-smooth animate-fade-in animate-slide-in-right ${
+                  className={cn(
+                    'group flex items-center gap-2 rounded-md text-left text-sm transition-smooth animate-fade-in animate-slide-in-right',
+                    collapsed ? 'px-2 py-2 justify-center' : 'px-3 py-2',
                     activeWorkspaceId === workspace.id
                       ? 'bg-primary text-primary-foreground'
                       : 'hover:bg-accent'
-                  }`}
+                  )}
                   style={{ animationDelay: `${index * 0.05}s` }}
                 >
-                  <button
-                    onClick={() => setActiveWorkspace(workspace.id)}
-                    className="flex-1 flex items-center gap-2 min-w-0"
-                    aria-label={`Switch to ${workspace.name} workspace`}
-                    aria-pressed={activeWorkspaceId === workspace.id}
-                    role="tab"
-                  >
-                    <Popover
-                      open={colorPickerOpen === workspace.id}
-                      onOpenChange={(open) => setColorPickerOpen(open ? workspace.id : null)}
-                    >
+                  {collapsed ? (
+                    <Popover>
                       <PopoverTrigger asChild>
                         <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setColorPickerOpen(workspace.id);
-                          }}
-                          className="h-3 w-3 rounded-full flex-shrink-0 border-2 border-transparent hover:border-foreground/20 transition-all hover:scale-125"
-                          style={{ backgroundColor: workspace.color }}
-                          title="Change color"
-                          aria-label="Change workspace color"
-                        />
+                          onClick={() => setActiveWorkspace(workspace.id)}
+                          className={cn(
+                            'w-full flex items-center justify-center rounded-md p-2 transition-colors',
+                            activeWorkspaceId === workspace.id
+                              ? 'bg-primary text-primary-foreground'
+                              : 'hover:bg-accent'
+                          )}
+                          aria-label={`Switch to ${workspace.name} workspace`}
+                          aria-pressed={activeWorkspaceId === workspace.id}
+                          role="tab"
+                        >
+                          <div
+                            className="h-4 w-4 rounded-full"
+                            style={{ backgroundColor: workspace.color }}
+                          />
+                        </button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-64 p-3" align="start" onClick={(e) => e.stopPropagation()}>
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-2">
-                            <Palette className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm font-medium">Choose Color</span>
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            {colorPresets.map((presetColor) => (
-                              <button
-                                key={presetColor}
-                                type="button"
-                                onClick={() => handleColorChange(workspace.id, presetColor)}
-                                className={cn(
-                                  'h-8 w-8 rounded-full border-2 transition-all hover:scale-110',
-                                  workspace.color === presetColor
-                                    ? 'border-foreground scale-110 ring-2 ring-offset-1 ring-offset-background ring-foreground'
-                                    : 'border-border'
-                                )}
-                                style={{ backgroundColor: presetColor }}
-                                aria-label={`Select color ${presetColor}`}
-                              />
-                            ))}
-                          </div>
-                          <div className="flex items-center gap-2 pt-2 border-t">
-                            <span className="text-xs text-muted-foreground">Custom:</span>
-                            <input
-                              type="color"
-                              value={workspace.color}
-                              onChange={(e) => handleColorChange(workspace.id, e.target.value)}
-                              className="h-8 w-16 cursor-pointer rounded border"
-                            />
+                      <PopoverContent className="w-48 p-2" side="right">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 px-2 py-1.5">
                             <div
-                              className="h-8 w-16 rounded border"
+                              className="h-3 w-3 rounded-full"
                               style={{ backgroundColor: workspace.color }}
                             />
+                            <span className="font-medium text-sm">{workspace.name}</span>
                           </div>
+                          <Separator />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="w-full justify-start"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditWorkspace(workspace.id, e);
+                            }}
+                          >
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="w-full justify-start text-destructive"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteWorkspace(workspace.id, e);
+                            }}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </Button>
                         </div>
                       </PopoverContent>
                     </Popover>
-                    <Folder className="h-4 w-4 flex-shrink-0" />
-                    <span className="flex-1 truncate">{workspace.name}</span>
-                  </button>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className={cn(
-                          'h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0',
-                          activeWorkspaceId === workspace.id && 'opacity-100'
-                        )}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        onClick={(e) => handleEditWorkspace(workspace.id, e)}
-                      >
-                        <Edit className="mr-2 h-4 w-4" />
-                        Edit Workspace
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setActiveWorkspace(workspace.id);
-                        }}
-                        disabled={activeWorkspaceId === workspace.id}
-                      >
-                        Switch to Workspace
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        onClick={(e) => handleDeleteWorkspace(workspace.id, e)}
-                        className={cn(
-                          'text-destructive focus:text-destructive',
-                          isDeleting === workspace.id && 'animate-pulse font-semibold'
-                        )}
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        {isDeleting === workspace.id ? 'Click again to confirm' : 'Delete Workspace'}
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  ) : (
+                    <>
+                      <div className="flex-1 flex items-center gap-2 min-w-0">
+                        <Popover
+                          open={colorPickerOpen === workspace.id}
+                          onOpenChange={(open) => setColorPickerOpen(open ? workspace.id : null)}
+                        >
+                          <PopoverTrigger asChild>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setColorPickerOpen(workspace.id);
+                              }}
+                              className="h-3 w-3 rounded-full flex-shrink-0 border-2 border-transparent hover:border-foreground/20 transition-all hover:scale-125"
+                              style={{ backgroundColor: workspace.color }}
+                              title="Change color"
+                              aria-label="Change workspace color"
+                            />
+                          </PopoverTrigger>
+                          <PopoverContent className="w-64 p-3" align="start" onClick={(e) => e.stopPropagation()}>
+                            <div className="space-y-3">
+                              <div className="flex items-center gap-2">
+                                <Palette className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-sm font-medium">Choose Color</span>
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                {colorPresets.map((presetColor) => (
+                                  <button
+                                    key={presetColor}
+                                    type="button"
+                                    onClick={() => handleColorChange(workspace.id, presetColor)}
+                                    className={cn(
+                                      'h-8 w-8 rounded-full border-2 transition-all hover:scale-110',
+                                      workspace.color === presetColor
+                                        ? 'border-foreground scale-110 ring-2 ring-offset-1 ring-offset-background ring-foreground'
+                                        : 'border-border'
+                                    )}
+                                    style={{ backgroundColor: presetColor }}
+                                    aria-label={`Select color ${presetColor}`}
+                                  />
+                                ))}
+                              </div>
+                              <div className="flex items-center gap-2 pt-2 border-t">
+                                <span className="text-xs text-muted-foreground">Custom:</span>
+                                <input
+                                  type="color"
+                                  value={workspace.color}
+                                  onChange={(e) => handleColorChange(workspace.id, e.target.value)}
+                                  className="h-8 w-16 cursor-pointer rounded border"
+                                />
+                                <div
+                                  className="h-8 w-16 rounded border"
+                                  style={{ backgroundColor: workspace.color }}
+                                />
+                              </div>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                        <button
+                          onClick={() => setActiveWorkspace(workspace.id)}
+                          className="flex-1 flex items-center gap-2 min-w-0 text-left"
+                          aria-label={`Switch to ${workspace.name} workspace`}
+                          aria-pressed={activeWorkspaceId === workspace.id}
+                          role="tab"
+                        >
+                          <Folder className="h-4 w-4 flex-shrink-0" />
+                          <span className="flex-1 truncate">{workspace.name}</span>
+                        </button>
+                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className={cn(
+                              'h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0',
+                              activeWorkspaceId === workspace.id && 'opacity-100'
+                            )}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={(e) => handleEditWorkspace(workspace.id, e)}
+                          >
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit Workspace
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveWorkspace(workspace.id);
+                            }}
+                            disabled={activeWorkspaceId === workspace.id}
+                          >
+                            Switch to Workspace
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={(e) => handleDeleteWorkspace(workspace.id, e)}
+                            className={cn(
+                              'text-destructive focus:text-destructive',
+                              isDeleting === workspace.id && 'animate-pulse font-semibold'
+                            )}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            {isDeleting === workspace.id ? 'Click again to confirm' : 'Delete Workspace'}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </>
+                  )}
                 </div>
               ))}
             </div>

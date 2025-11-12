@@ -54,7 +54,7 @@ export function NoteHistory({ taskId, noteId, open, onClose, onRestore }: NoteHi
     const versionToRestore = allVersions.find((v) => v.version === selectedVersion);
     if (versionToRestore && versionToRestore.version !== note.version) {
       // Restore the content
-      updateNote(taskId, noteId, versionToRestore.content);
+      updateNote(noteId, versionToRestore.content, undefined, taskId);
       onClose();
       if (onRestore) {
         onRestore(selectedVersion);

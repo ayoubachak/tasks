@@ -29,23 +29,7 @@ export function TaskList() {
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
 
   const activeWorkspace = getActiveWorkspace();
-
-  if (!activeWorkspace) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <div className="text-center">
-          <p className="text-lg font-medium text-muted-foreground">
-            No workspace selected
-          </p>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Create or select a workspace to get started
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  const allTasks = getTasksByWorkspace(activeWorkspace.id);
+  const allTasks = activeWorkspace ? getTasksByWorkspace(activeWorkspace.id) : [];
   const { filteredTasks, count } = useTaskFilters({
     tasks: allTasks,
     filters,
@@ -65,12 +49,16 @@ export function TaskList() {
 
   // Listen for keyboard shortcut events
   useEffect(() => {
+    if (!activeWorkspace) return; // Don't set up listeners if no workspace
+
     const handleNewTaskEvent = () => {
-      handleCreateTask();
+      setEditingTaskId(null);
+      setIsEditorOpen(true);
     };
 
     const handleEditTaskEvent = (event: CustomEvent<{ taskId: string }>) => {
-      handleEditTask(event.detail.taskId);
+      setEditingTaskId(event.detail.taskId);
+      setIsEditorOpen(true);
     };
 
     const handleSelectAll = (e: KeyboardEvent) => {
@@ -100,12 +88,27 @@ export function TaskList() {
       window.removeEventListener('edit-task', handleEditTaskEvent as EventListener);
       window.removeEventListener('keydown', handleSelectAll);
     };
-  }, [filteredTasks, isSelectionMode, selectAll, setSelectionMode]);
+  }, [filteredTasks, isSelectionMode, selectAll, setSelectionMode, activeWorkspace]);
 
   const handleCloseEditor = () => {
     setIsEditorOpen(false);
     setEditingTaskId(null);
   };
+
+  if (!activeWorkspace) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="text-center">
+          <p className="text-lg font-medium text-muted-foreground">
+            No workspace selected
+          </p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Create or select a workspace to get started
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const renderView = () => {
     switch (currentView) {

@@ -155,7 +155,15 @@ export function useImagePaste(
             onImagePaste(result);
           } catch (error) {
             console.error('Error processing pasted image:', error);
-            alert('Failed to process image. Please try again.');
+            if (error instanceof Error) {
+              if (error.message.includes('Storage is full') || error.message.includes('QuotaExceededError')) {
+                alert('Storage is full. Some old images have been cleaned up. Please try again, or manually delete some images.');
+              } else {
+                alert(`Failed to process image: ${error.message}`);
+              }
+            } else {
+              alert('Failed to process image. Please try again.');
+            }
           }
         }
       }

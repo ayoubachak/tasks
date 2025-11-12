@@ -1,18 +1,22 @@
 import { useEffect, useState, useRef } from 'react';
 import { AppLayout } from './components/layout/AppLayout';
 import { TaskList } from './components/task/TaskList';
+import { NotesList } from './components/notes/NotesList';
 import { DescriptionEditorView } from './components/views/DescriptionEditorView';
 import { NoteEditorView } from './components/views/NoteEditorView';
 import { KeyboardShortcuts } from './components/shared/KeyboardShortcuts';
 import { CommandPalette } from './components/shared/CommandPalette';
 import { ErrorBoundary } from './components/shared/ErrorBoundary';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
 import { storage } from './lib/storage/localStorage';
 import { useWorkspaceStore, useUIStore } from './stores';
+import { CheckSquare, StickyNote } from 'lucide-react';
 
 function App() {
   const { workspaces, activeWorkspaceId, setActiveWorkspace } = useWorkspaceStore();
   const { currentView } = useUIStore();
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'tasks' | 'notes'>('tasks');
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -61,7 +65,26 @@ function App() {
       />
       <AppLayout>
         <ErrorBoundary>
-          <TaskList />
+          <div className="h-full flex flex-col">
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'tasks' | 'notes')} className="flex-1 flex flex-col min-h-0">
+              <TabsList className="mb-4 w-fit flex-shrink-0">
+                <TabsTrigger value="tasks" className="flex items-center gap-2">
+                  <CheckSquare className="h-4 w-4" />
+                  Tasks
+                </TabsTrigger>
+                <TabsTrigger value="notes" className="flex items-center gap-2">
+                  <StickyNote className="h-4 w-4" />
+                  Notes
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="tasks" className="flex-1 mt-0 min-h-0">
+                <TaskList />
+              </TabsContent>
+              <TabsContent value="notes" className="flex-1 mt-0 min-h-0">
+                <NotesList />
+              </TabsContent>
+            </Tabs>
+          </div>
         </ErrorBoundary>
       </AppLayout>
       {currentView === 'description-editor' && (

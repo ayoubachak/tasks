@@ -22,7 +22,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { TagPicker } from '@/components/tags/TagPicker';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Plus, FileText, Calendar as CalendarIcon, ExternalLink, Repeat, ListChecks, Link2, ListTree, StickyNote, Info, Clock, Bell, Play } from 'lucide-react';
+import { Plus, FileText, Calendar as CalendarIcon, ExternalLink, Repeat, ListChecks, Link2, ListTree, StickyNote, Info, Clock, Bell, Play, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { formatTime, parseTime, formatTimeForInput } from '@/lib/utils/timeFormat';
@@ -41,7 +41,8 @@ export function TaskEditor({ taskId, workspaceId, onClose }: TaskEditorProps) {
     updateTask,
     deleteTask,
     getTask, 
-    getTasksByWorkspace
+    getTasksByWorkspace,
+    deleteNote
   } = useTaskStore();
   const { openDescriptionEditor, openNoteEditor } = useUIStore();
   const task = taskId ? getTask(taskId) : null;
@@ -642,11 +643,16 @@ export function TaskEditor({ taskId, workspaceId, onClose }: TaskEditorProps) {
                       <div className="flex items-center gap-2">
                         <StickyNote className="h-4 w-4" />
                         <span>Notes</span>
-                        {currentTask.notes && currentTask.notes.length > 0 && (
-                          <span className="text-xs text-muted-foreground ml-2">
-                            ({currentTask.notes.length})
-                          </span>
-                        )}
+                        {(() => {
+                          const linkedNotes = (currentTask.notes || []).filter(
+                            (note) => note.taskId === currentTask.id
+                          );
+                          return linkedNotes.length > 0 && (
+                            <span className="text-xs text-muted-foreground ml-2">
+                              ({linkedNotes.length})
+                            </span>
+                          );
+                        })()}
                       </div>
                     </AccordionTrigger>
                     <AccordionContent>
@@ -657,17 +663,28 @@ export function TaskEditor({ taskId, workspaceId, onClose }: TaskEditorProps) {
                           size="sm"
                           className="w-full"
                           onClick={() => {
+                            // Note will be created with workspaceId from currentTask
                             openNoteEditor(currentTask.id, null, workspaceId);
                           }}
                         >
                           <Plus className="mr-2 h-4 w-4" />
                           Add Note
                         </Button>
-                        {!currentTask.notes || currentTask.notes.length === 0 ? (
-                          <p className="text-sm text-muted-foreground text-center py-4">No notes yet</p>
-                        ) : (
-                          <div className="space-y-2 max-h-64 overflow-y-auto">
-                            {(currentTask.notes || []).map((note) => (
+                        {(() => {
+                          // Only show notes that are actually linked to this task
+                          const linkedNotes = (currentTask.notes || []).filter(
+                            (note) => note.taskId === currentTask.id
+                          );
+                          
+                          if (linkedNotes.length === 0) {
+                            return (
+                              <p className="text-sm text-muted-foreground text-center py-4">No notes yet</p>
+                            );
+                          }
+                          
+                          return (
+                            <div className="space-y-2 max-h-64 overflow-y-auto">
+                              {linkedNotes.map((note) => (
                               <div
                                 key={note.id}
                                 className="flex items-start justify-between rounded-md border p-3 text-sm hover:bg-accent/50 cursor-pointer transition-colors"
@@ -679,6 +696,7 @@ export function TaskEditor({ taskId, workspaceId, onClose }: TaskEditorProps) {
                                   <div className="flex items-center gap-2 mb-1">
                                     <FileText className="h-4 w-4 text-muted-foreground" />
                                     {note.pinned && <span className="text-xs">📌</span>}
+                                    <span className="font-medium">{note.title || 'Untitled Note'}</span>
                                     <span className="text-xs text-muted-foreground">
                                       {format(note.updatedAt, 'MMM d, yyyy')}
                                     </span>
@@ -689,22 +707,38 @@ export function TaskEditor({ taskId, workspaceId, onClose }: TaskEditorProps) {
                                     className="mt-1"
                                   />
                                 </div>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  className="ml-2"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    openNoteEditor(currentTask.id, note.id, workspaceId);
-                                  }}
-                                >
-                                  Edit
-                                </Button>
+                                <div className="flex items-center gap-1 ml-2">
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      openNoteEditor(currentTask.id, note.id, workspaceId);
+                                    }}
+                                  >
+                                    Edit
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-destructive hover:text-destructive"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (confirm('Are you sure you want to delete this note?')) {
+                                        deleteNote(note.id, currentTask.id);
+                                      }
+                                    }}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
                               </div>
-                            ))}
-                          </div>
-                        )}
+                              ))}
+                            </div>
+                          );
+                        })()}
                       </div>
                     </AccordionContent>
                   </AccordionItem>
