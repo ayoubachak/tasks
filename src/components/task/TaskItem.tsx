@@ -50,11 +50,21 @@ export function TaskItem({ task, onEdit }: TaskItemProps) {
   return (
     <Card
       className={cn(
-        'p-4 cursor-pointer transition-colors',
+        'p-4 cursor-pointer transition-smooth animate-fade-in animate-slide-in-up',
+        'hover:shadow-md hover:border-primary/20',
         isSelectionMode && 'hover:bg-accent/50',
         isTaskSelected && 'ring-2 ring-primary bg-accent/30'
       )}
       onClick={handleCardClick}
+      role="article"
+      aria-label={`Task: ${task.title}`}
+      tabIndex={isSelectionMode ? 0 : undefined}
+      onKeyDown={(e) => {
+        if (isSelectionMode && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault();
+          toggleSelection(task.id);
+        }
+      }}
     >
       <div className="flex items-start gap-3">
         {isSelectionMode ? (

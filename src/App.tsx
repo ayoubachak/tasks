@@ -5,6 +5,7 @@ import { DescriptionEditorView } from './components/views/DescriptionEditorView'
 import { NoteEditorView } from './components/views/NoteEditorView';
 import { KeyboardShortcuts } from './components/shared/KeyboardShortcuts';
 import { CommandPalette } from './components/shared/CommandPalette';
+import { ErrorBoundary } from './components/shared/ErrorBoundary';
 import { storage } from './lib/storage/localStorage';
 import { useWorkspaceStore, useUIStore } from './stores';
 
@@ -46,7 +47,7 @@ function App() {
 
   // Always render the main layout, modals render on top
   return (
-    <>
+    <ErrorBoundary>
       <KeyboardShortcuts
         onNewTask={handleNewTask}
         onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
@@ -59,11 +60,21 @@ function App() {
         onNavigateToTask={handleNavigateToTask}
       />
       <AppLayout>
-        <TaskList />
+        <ErrorBoundary>
+          <TaskList />
+        </ErrorBoundary>
       </AppLayout>
-      {currentView === 'description-editor' && <DescriptionEditorView />}
-      {currentView === 'note-editor' && <NoteEditorView />}
-    </>
+      {currentView === 'description-editor' && (
+        <ErrorBoundary>
+          <DescriptionEditorView />
+        </ErrorBoundary>
+      )}
+      {currentView === 'note-editor' && (
+        <ErrorBoundary>
+          <NoteEditorView />
+        </ErrorBoundary>
+      )}
+    </ErrorBoundary>
   );
 }
 

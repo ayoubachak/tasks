@@ -154,9 +154,9 @@ export function TaskList() {
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold">{activeWorkspace.name}</h2>
+          <h2 className="text-xl sm:text-2xl font-bold">{activeWorkspace.name}</h2>
           <p className="text-sm text-muted-foreground">
             {count} {count === 1 ? 'task' : 'tasks'}
             {count !== allTasks.length && ` of ${allTasks.length} total`}
@@ -168,25 +168,31 @@ export function TaskList() {
             type="button"
             variant={isSelectionMode ? 'default' : 'outline'}
             onClick={() => setSelectionMode(!isSelectionMode)}
+            className="text-xs sm:text-sm"
+            size="sm"
           >
-            <CheckSquare className="mr-2 h-4 w-4" />
-            {isSelectionMode ? 'Cancel Selection' : 'Select'}
+            <CheckSquare className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">{isSelectionMode ? 'Cancel Selection' : 'Select'}</span>
+            <span className="sm:hidden">{isSelectionMode ? 'Cancel' : 'Select'}</span>
           </Button>
-          <Button onClick={handleCreateTask}>
-            <Plus className="mr-2 h-4 w-4" />
-            New Task
+          <Button onClick={handleCreateTask} size="sm" className="text-xs sm:text-sm">
+            <Plus className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">New Task</span>
+            <span className="sm:hidden">New</span>
           </Button>
         </div>
       </div>
 
       {/* Toolbar */}
       <div className="mb-4 space-y-3">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
           <div className="flex-1">
             <SearchBar />
           </div>
-          <ViewSwitcher />
-          <SortMenu />
+          <div className="flex items-center gap-2">
+            <ViewSwitcher />
+            <SortMenu />
+          </div>
         </div>
         <FilterBar />
       </div>
