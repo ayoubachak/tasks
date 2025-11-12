@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import { useTaskStore, useUIStore } from '@/stores';
 import { MarkdownEditor } from '@/components/notes/MarkdownEditor';
 import { MarkdownViewer } from '@/components/notes/MarkdownViewer';
+import { NoteHistory } from '@/components/notes/NoteHistory';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Save, Pin, Trash2 } from 'lucide-react';
+import { ArrowLeft, Save, Pin, Trash2, History } from 'lucide-react';
 
 export function NoteEditorView() {
   const { currentView, editorState, navigateBack } = useUIStore();
@@ -17,6 +18,7 @@ export function NoteEditorView() {
   
   const [content, setContent] = useState('');
   const [viewMode, setViewMode] = useState<'edit' | 'preview' | 'split'>('edit');
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
   useEffect(() => {
     if (note) {
@@ -45,6 +47,11 @@ export function NoteEditorView() {
       addNote(task.id, content);
     }
     navigateBack();
+  };
+
+  const handleRestore = (noteId: string, restoredContent: string) => {
+    updateNote(task.id, noteId, restoredContent);
+    setContent(restoredContent);
   };
 
   const handleDelete = () => {
@@ -84,6 +91,14 @@ export function NoteEditorView() {
           <div className="flex items-center gap-2">
             {note && (
               <>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setIsHistoryOpen(true)}
+                  title="View history"
+                >
+                  <History className="h-4 w-4" />
+                </Button>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -162,6 +177,18 @@ export function NoteEditorView() {
           </div>
         </Tabs>
       </div>
+
+      {note && task && (
+        <NoteHistory
+          taskId={task.id}
+          noteId={note.id}
+          open={isHistoryOpen}
+          onClose={() => setIsHistoryOpen(false)}
+          onRestore={(version) => {
+            console.log('Restore version', version);
+          }}
+        />
+      )}
     </div>
   );
 }

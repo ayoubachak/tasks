@@ -3,7 +3,8 @@ import { persist } from 'zustand/middleware';
 import { nanoid } from 'nanoid';
 import { buildSubtaskTree, calculateNestedProgress, getSubtaskDescendants } from '@/lib/subtasks/treeUtils';
 import { wouldCreateCycle } from '@/lib/dependencies/dependencyUtils';
-import type { Task, TaskStatus, Priority, Subtask, Note, ImageData } from '@/types';
+import { getNextOccurrence, shouldCreateRecurrence } from '@/lib/recurrence/recurrenceUtils';
+import type { Task, TaskStatus, Priority, Subtask, Note, ImageData, RecurrenceRule } from '@/types';
 
 interface TaskState {
   tasks: Task[];
@@ -34,6 +35,21 @@ interface TaskState {
   removeDependency: (taskId: string, dependencyId: string) => void;
   addBlockedBy: (taskId: string, blockerId: string) => void;
   removeBlockedBy: (taskId: string, blockerId: string) => void;
+  
+  // Recurrence
+  setRecurrence: (taskId: string, rule: RecurrenceRule | undefined) => void;
+  createRecurrenceInstance: (taskId: string) => Task | null;
+  getRecurringTasks: () => Task[];
+  
+  // Checklists
+  addChecklist: (taskId: string, title: string) => Checklist;
+  updateChecklist: (taskId: string, checklistId: string, updates: Partial<Checklist>) => void;
+  deleteChecklist: (taskId: string, checklistId: string) => void;
+  addChecklistItem: (taskId: string, checklistId: string, text: string) => ChecklistItem;
+  updateChecklistItem: (taskId: string, checklistId: string, itemId: string, updates: Partial<ChecklistItem>) => void;
+  deleteChecklistItem: (taskId: string, checklistId: string, itemId: string) => void;
+  toggleChecklistItem: (taskId: string, checklistId: string, itemId: string) => void;
+  calculateChecklistProgress: (taskId: string, checklistId: string) => number;
 }
 
 const createDefaultTask = (
@@ -57,6 +73,7 @@ const createDefaultTask = (
     notes: [],
     attachments: [],
     subtasks: [],
+    checklists: [],
     createdAt: now,
     updatedAt: now,
     customFields: {},
@@ -468,6 +485,280 @@ export const useTaskStore = create<TaskState>()(
             return task;
           }),
         }));
+      },
+
+      setRecurrence: (taskId: string, rule: RecurrenceRule | undefined) => {
+        set((state) => ({
+          tasks: state.tasks.map((task) => {
+            if (task.id === taskId) {
+              return {
+                ...task,
+                recurrence: rule,
+                updatedAt: Date.now(),
+              };
+            }
+            return task;
+          }),
+        }));
+      },
+
+      createRecurrenceInstance: (taskId: string) => {
+        const task = get().tasks.find((t) => t.id === taskId);
+        if (!task || !task.recurrence) {
+          return null;
+        }
+
+        const lastOccurrence = task.completedAt || task.createdAt;
+        const nextOccurrence = getNextOccurrence(task.recurrence, lastOccurrence);
+        
+        if (!nextOccurrence) {
+          return null; // Recurrence ended
+        }
+
+        // Create new task instance
+        const instance: Task = {
+          ...task,
+          id: nanoid(),
+          status: 'todo',
+          progress: 0,
+          completedAt: undefined,
+          createdAt: nextOccurrence,
+          updatedAt: nextOccurrence,
+          // Reset completion-related fields
+          subtasks: task.subtasks.map((st) => ({
+            ...st,
+            completed: false,
+            completedAt: undefined,
+          })),
+        };
+
+        set((state) => ({
+          tasks: [...state.tasks, instance],
+        }));
+
+        return instance;
+      },
+
+      getRecurringTasks: () => {
+        return get().tasks.filter((task) => task.recurrence !== undefined);
+      },
+
+      addChecklist: (taskId: string, title: string) => {
+        const task = get().tasks.find((t) => t.id === taskId);
+        if (!task) {
+          throw new Error(`Task ${taskId} not found`);
+        }
+
+        const maxOrder = task.checklists.length > 0
+          ? Math.max(...task.checklists.map((c) => c.order))
+          : -1;
+
+        const checklist: Checklist = {
+          id: nanoid(),
+          taskId,
+          title,
+          items: [],
+          order: maxOrder + 1,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        };
+
+        set((state) => ({
+          tasks: state.tasks.map((task) => {
+            if (task.id === taskId) {
+              return {
+                ...task,
+                checklists: [...task.checklists, checklist],
+                updatedAt: Date.now(),
+              };
+            }
+            return task;
+          }),
+        }));
+
+        return checklist;
+      },
+
+      updateChecklist: (taskId: string, checklistId: string, updates: Partial<Checklist>) => {
+        set((state) => ({
+          tasks: state.tasks.map((task) => {
+            if (task.id === taskId) {
+              const checklists = task.checklists.map((c) =>
+                c.id === checklistId ? { ...c, ...updates, updatedAt: Date.now() } : c
+              );
+              return {
+                ...task,
+                checklists,
+                updatedAt: Date.now(),
+              };
+            }
+            return task;
+          }),
+        }));
+      },
+
+      deleteChecklist: (taskId: string, checklistId: string) => {
+        set((state) => ({
+          tasks: state.tasks.map((task) => {
+            if (task.id === taskId) {
+              return {
+                ...task,
+                checklists: task.checklists.filter((c) => c.id !== checklistId),
+                updatedAt: Date.now(),
+              };
+            }
+            return task;
+          }),
+        }));
+      },
+
+      addChecklistItem: (taskId: string, checklistId: string, text: string) => {
+        const task = get().tasks.find((t) => t.id === taskId);
+        if (!task) {
+          throw new Error(`Task ${taskId} not found`);
+        }
+
+        const checklist = task.checklists.find((c) => c.id === checklistId);
+        if (!checklist) {
+          throw new Error(`Checklist ${checklistId} not found`);
+        }
+
+        const maxOrder = checklist.items.length > 0
+          ? Math.max(...checklist.items.map((i) => i.order))
+          : -1;
+
+        const item: ChecklistItem = {
+          id: nanoid(),
+          checklistId,
+          text,
+          completed: false,
+          order: maxOrder + 1,
+          createdAt: Date.now(),
+        };
+
+        set((state) => ({
+          tasks: state.tasks.map((task) => {
+            if (task.id === taskId) {
+              const checklists = task.checklists.map((c) => {
+                if (c.id === checklistId) {
+                  return {
+                    ...c,
+                    items: [...c.items, item],
+                    updatedAt: Date.now(),
+                  };
+                }
+                return c;
+              });
+              return {
+                ...task,
+                checklists,
+                updatedAt: Date.now(),
+              };
+            }
+            return task;
+          }),
+        }));
+
+        return item;
+      },
+
+      updateChecklistItem: (taskId: string, checklistId: string, itemId: string, updates: Partial<ChecklistItem>) => {
+        set((state) => ({
+          tasks: state.tasks.map((task) => {
+            if (task.id === taskId) {
+              const checklists = task.checklists.map((c) => {
+                if (c.id === checklistId) {
+                  const items = c.items.map((i) =>
+                    i.id === itemId ? { ...i, ...updates } : i
+                  );
+                  return {
+                    ...c,
+                    items,
+                    updatedAt: Date.now(),
+                  };
+                }
+                return c;
+              });
+              return {
+                ...task,
+                checklists,
+                updatedAt: Date.now(),
+              };
+            }
+            return task;
+          }),
+        }));
+      },
+
+      deleteChecklistItem: (taskId: string, checklistId: string, itemId: string) => {
+        set((state) => ({
+          tasks: state.tasks.map((task) => {
+            if (task.id === taskId) {
+              const checklists = task.checklists.map((c) => {
+                if (c.id === checklistId) {
+                  return {
+                    ...c,
+                    items: c.items.filter((i) => i.id !== itemId),
+                    updatedAt: Date.now(),
+                  };
+                }
+                return c;
+              });
+              return {
+                ...task,
+                checklists,
+                updatedAt: Date.now(),
+              };
+            }
+            return task;
+          }),
+        }));
+      },
+
+      toggleChecklistItem: (taskId: string, checklistId: string, itemId: string) => {
+        set((state) => ({
+          tasks: state.tasks.map((task) => {
+            if (task.id === taskId) {
+              const checklists = task.checklists.map((c) => {
+                if (c.id === checklistId) {
+                  const items = c.items.map((i) => {
+                    if (i.id === itemId) {
+                      return {
+                        ...i,
+                        completed: !i.completed,
+                        completedAt: !i.completed ? Date.now() : undefined,
+                      };
+                    }
+                    return i;
+                  });
+                  return {
+                    ...c,
+                    items,
+                    updatedAt: Date.now(),
+                  };
+                }
+                return c;
+              });
+              return {
+                ...task,
+                checklists,
+                updatedAt: Date.now(),
+              };
+            }
+            return task;
+          }),
+        }));
+      },
+
+      calculateChecklistProgress: (taskId: string, checklistId: string) => {
+        const task = get().tasks.find((t) => t.id === taskId);
+        if (!task) return 0;
+
+        const checklist = task.checklists.find((c) => c.id === checklistId);
+        if (!checklist || checklist.items.length === 0) return 0;
+
+        const completedCount = checklist.items.filter((i) => i.completed).length;
+        return Math.round((completedCount / checklist.items.length) * 100);
       },
     }),
     {

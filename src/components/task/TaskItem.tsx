@@ -4,8 +4,9 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { DescriptionPreview } from './DescriptionPreview';
 import { SubtaskTree } from '@/components/subtask/SubtaskTree';
+import { formatRecurrenceRule } from '@/lib/recurrence/recurrenceUtils';
 import { format } from 'date-fns';
-import { Edit2, Trash2, Link2, Lock } from 'lucide-react';
+import { Edit2, Trash2, Link2, Lock, Repeat } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { Task } from '@/types';
@@ -141,6 +142,21 @@ export function TaskItem({ task, onEdit }: TaskItemProps) {
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>Blocked by {task.blockedBy.length} task{task.blockedBy.length > 1 ? 's' : ''}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+            {task.recurrence && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge variant="outline" className="text-xs flex items-center gap-1">
+                      <Repeat className="h-3 w-3" />
+                      Recurring
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{formatRecurrenceRule(task.recurrence)}</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>

@@ -85,6 +85,7 @@ export interface Task {
   notes: Note[];
   attachments: ImageData[];
   subtasks: Subtask[];
+  checklists: Checklist[];
 
   // Metadata
   createdAt: number;
