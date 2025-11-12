@@ -1,4 +1,4 @@
-import { useTaskStore } from '@/stores';
+import { useTaskStore, useSelectionStore } from '@/stores';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 import { Edit2, Trash2, Link2, Lock, Repeat } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 import type { Task } from '@/types';
 
 interface TaskItemProps {
@@ -18,6 +19,8 @@ interface TaskItemProps {
 
 export function TaskItem({ task, onEdit }: TaskItemProps) {
   const { toggleTaskStatus, deleteTask } = useTaskStore();
+  const { isSelectionMode, isSelected, toggleSelection } = useSelectionStore();
+  const isTaskSelected = isSelected(task.id);
 
   const handleToggle = () => {
     toggleTaskStatus(task.id);
@@ -37,14 +40,37 @@ export function TaskItem({ task, onEdit }: TaskItemProps) {
     urgent: 'bg-red-500',
   };
 
+  const handleCardClick = (e: React.MouseEvent) => {
+    if (isSelectionMode) {
+      e.stopPropagation();
+      toggleSelection(task.id);
+    }
+  };
+
   return (
-    <Card className="p-4">
+    <Card
+      className={cn(
+        'p-4 cursor-pointer transition-colors',
+        isSelectionMode && 'hover:bg-accent/50',
+        isTaskSelected && 'ring-2 ring-primary bg-accent/30'
+      )}
+      onClick={handleCardClick}
+    >
       <div className="flex items-start gap-3">
-        <Checkbox
-          checked={task.status === 'done'}
-          onCheckedChange={handleToggle}
-          className="mt-1"
-        />
+        {isSelectionMode ? (
+          <Checkbox
+            checked={isTaskSelected}
+            onCheckedChange={() => toggleSelection(task.id)}
+            className="mt-1"
+            onClick={(e) => e.stopPropagation()}
+          />
+        ) : (
+          <Checkbox
+            checked={task.status === 'done'}
+            onCheckedChange={handleToggle}
+            className="mt-1"
+          />
+        )}
         <div className="flex-1">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1">
@@ -71,22 +97,32 @@ export function TaskItem({ task, onEdit }: TaskItemProps) {
                   title={task.priority}
                 />
               )}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={onEdit}
-              >
-                <Edit2 className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-destructive"
-                onClick={handleDelete}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              {!isSelectionMode && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit();
+                    }}
+                  >
+                    <Edit2 className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-destructive"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete();
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </>
+              )}
             </div>
           </div>
 

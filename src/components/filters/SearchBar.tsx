@@ -15,6 +15,7 @@ export function SearchBar() {
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
         className="pl-9 pr-9"
+        data-search-input
       />
       {searchQuery && (
         <Button

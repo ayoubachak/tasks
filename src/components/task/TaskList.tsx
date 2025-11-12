@@ -1,8 +1,9 @@
-import { useTaskStore, useWorkspaceStore, useViewStore } from '@/stores';
+import { useTaskStore, useWorkspaceStore, useViewStore, useSelectionStore } from '@/stores';
+import { useEffect } from 'react';
 import { TaskItem } from './TaskItem';
 import { TaskEditor } from './TaskEditor';
 import { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, CheckSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
@@ -13,11 +14,14 @@ import { SortMenu } from '@/components/filters/SortMenu';
 import { ViewSwitcher } from '@/components/filters/ViewSwitcher';
 import { BoardView } from '@/components/views/BoardView';
 import { CalendarView } from '@/components/views/CalendarView';
+import { SortableListView } from '@/components/views/SortableListView';
+import { BulkActionsBar } from '@/components/bulk/BulkActionsBar';
 
 export function TaskList() {
   const { getActiveWorkspace } = useWorkspaceStore();
   const { getTasksByWorkspace } = useTaskStore();
   const { currentView, filters, sortBy, searchQuery } = useViewStore();
+  const { isSelectionMode, setSelectionMode, selectAll, getSelectedCount } = useSelectionStore();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
 
@@ -56,6 +60,45 @@ export function TaskList() {
     setIsEditorOpen(true);
   };
 
+  // Listen for keyboard shortcut events
+  useEffect(() => {
+    const handleNewTaskEvent = () => {
+      handleCreateTask();
+    };
+
+    const handleEditTaskEvent = (event: CustomEvent<{ taskId: string }>) => {
+      handleEditTask(event.detail.taskId);
+    };
+
+    const handleSelectAll = (e: KeyboardEvent) => {
+      // Only trigger on CTRL+A or CMD+A, not other CTRL combinations
+      if (e.key !== 'a' && e.key !== 'A') return;
+      
+      // Only if not in an input field
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
+      
+      if (e.metaKey || e.ctrlKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!isSelectionMode) {
+          setSelectionMode(true);
+        }
+        selectAll(filteredTasks.map((t) => t.id));
+      }
+    };
+
+    window.addEventListener('new-task', handleNewTaskEvent as EventListener);
+    window.addEventListener('edit-task', handleEditTaskEvent as EventListener);
+    window.addEventListener('keydown', handleSelectAll);
+
+    return () => {
+      window.removeEventListener('new-task', handleNewTaskEvent as EventListener);
+      window.removeEventListener('edit-task', handleEditTaskEvent as EventListener);
+      window.removeEventListener('keydown', handleSelectAll);
+    };
+  }, [filteredTasks, isSelectionMode, selectAll, setSelectionMode]);
+
   const handleCloseEditor = () => {
     setIsEditorOpen(false);
     setEditingTaskId(null);
@@ -69,6 +112,11 @@ export function TaskList() {
         return <CalendarView tasks={filteredTasks} onEditTask={handleEditTask} />;
       case 'list':
       default:
+        // Use sortable list when no filters/search are active for drag & drop reordering
+        if (filters.length === 0 && !searchQuery) {
+          return <SortableListView tasks={filteredTasks} onEditTask={handleEditTask} />;
+        }
+        // Use regular list when filters/search are active (preserves sort order)
         return (
           <ScrollArea className="flex-1">
             {filteredTasks.length === 0 ? (
@@ -109,12 +157,23 @@ export function TaskList() {
           <p className="text-sm text-muted-foreground">
             {count} {count === 1 ? 'task' : 'tasks'}
             {count !== allTasks.length && ` of ${allTasks.length} total`}
+            {isSelectionMode && ` • ${getSelectedCount()} selected`}
           </p>
         </div>
-        <Button onClick={handleCreateTask}>
-          <Plus className="mr-2 h-4 w-4" />
-          New Task
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant={isSelectionMode ? 'default' : 'outline'}
+            onClick={() => setSelectionMode(!isSelectionMode)}
+          >
+            <CheckSquare className="mr-2 h-4 w-4" />
+            {isSelectionMode ? 'Cancel Selection' : 'Select'}
+          </Button>
+          <Button onClick={handleCreateTask}>
+            <Plus className="mr-2 h-4 w-4" />
+            New Task
+          </Button>
+        </div>
       </div>
 
       {/* Toolbar */}
@@ -145,6 +204,9 @@ export function TaskList() {
           onClose={handleCloseEditor}
         />
       )}
+
+      {/* Bulk Actions Bar */}
+      <BulkActionsBar />
     </div>
   );
 }
