@@ -14,6 +14,8 @@ import {
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { DescriptionPreview } from './DescriptionPreview';
+import { SubtaskTree } from '@/components/subtask/SubtaskTree';
+import { DependencyPicker } from '@/components/dependencies/DependencyPicker';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { TagPicker } from '@/components/tags/TagPicker';
@@ -98,14 +100,14 @@ export function TaskEditor({ taskId, workspaceId, onClose }: TaskEditorProps) {
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>{task ? 'Edit Task' : 'Create Task'}</DialogTitle>
           <DialogDescription>
             {task ? 'Update task details and settings' : 'Create a new task with title, description, and metadata'}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto flex-1 pr-2">
           <div className="space-y-2">
             <Label htmlFor="title">Title</Label>
             <Input
@@ -284,6 +286,16 @@ export function TaskEditor({ taskId, workspaceId, onClose }: TaskEditorProps) {
 
           {task && (
             <>
+              <Separator />
+              <div className="space-y-2">
+                <Label>Dependencies</Label>
+                <DependencyPicker task={task} workspaceId={workspaceId} />
+              </div>
+              <Separator />
+              <div className="space-y-2">
+                <Label>Subtasks</Label>
+                <SubtaskTree taskId={task.id} subtasks={task.subtasks} />
+              </div>
               <Separator />
               <div className="space-y-2">
                 <div className="flex items-center justify-between">

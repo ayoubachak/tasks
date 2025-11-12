@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { nanoid } from 'nanoid';
+import { buildSubtaskTree, calculateNestedProgress, getSubtaskDescendants } from '@/lib/subtasks/treeUtils';
+import { wouldCreateCycle } from '@/lib/dependencies/dependencyUtils';
 import type { Task, TaskStatus, Priority, Subtask, Note, ImageData } from '@/types';
 
 interface TaskState {
@@ -17,7 +19,7 @@ interface TaskState {
   toggleTaskStatus: (id: string) => void;
   getTasksByWorkspace: (workspaceId: string) => Task[];
   getTask: (id: string) => Task | undefined;
-  addSubtask: (taskId: string, title: string) => Subtask;
+  addSubtask: (taskId: string, title: string, parentSubtaskId?: string) => Subtask;
   updateSubtask: (taskId: string, subtaskId: string, updates: Partial<Subtask>) => void;
   deleteSubtask: (taskId: string, subtaskId: string) => void;
   toggleSubtask: (taskId: string, subtaskId: string) => void;
@@ -26,6 +28,12 @@ interface TaskState {
   updateNote: (taskId: string, noteId: string, content: string) => void;
   deleteNote: (taskId: string, noteId: string) => void;
   pinNote: (taskId: string, noteId: string, pinned: boolean) => void;
+  
+  // Dependencies
+  addDependency: (taskId: string, dependencyId: string) => void;
+  removeDependency: (taskId: string, dependencyId: string) => void;
+  addBlockedBy: (taskId: string, blockerId: string) => void;
+  removeBlockedBy: (taskId: string, blockerId: string) => void;
 }
 
 const createDefaultTask = (
@@ -124,13 +132,27 @@ export const useTaskStore = create<TaskState>()(
         return get().tasks.find((task) => task.id === id);
       },
 
-      addSubtask: (taskId: string, title: string) => {
+      addSubtask: (taskId: string, title: string, parentSubtaskId?: string) => {
+        const task = get().tasks.find((t) => t.id === taskId);
+        if (!task) {
+          throw new Error(`Task ${taskId} not found`);
+        }
+
+        // Calculate order (max order + 1 for siblings, or 0 if root)
+        const siblings = task.subtasks.filter(
+          (st) => st.parentSubtaskId === parentSubtaskId
+        );
+        const maxOrder = siblings.length > 0 
+          ? Math.max(...siblings.map((st) => st.order))
+          : -1;
+
         const subtask: Subtask = {
           id: nanoid(),
           taskId,
+          parentSubtaskId,
           title,
           completed: false,
-          order: 0,
+          order: maxOrder + 1,
           createdAt: Date.now(),
         };
 
@@ -186,10 +208,17 @@ export const useTaskStore = create<TaskState>()(
       },
 
       deleteSubtask: (taskId: string, subtaskId: string) => {
+        const task = get().tasks.find((t) => t.id === taskId);
+        if (!task) return;
+
+        // Get all descendant IDs to delete
+        const descendants = getSubtaskDescendants(task.subtasks, subtaskId);
+        const idsToDelete = new Set([subtaskId, ...descendants]);
+
         set((state) => ({
           tasks: state.tasks.map((task) => {
             if (task.id === taskId) {
-              const subtasks = task.subtasks.filter((st) => st.id !== subtaskId);
+              const subtasks = task.subtasks.filter((st) => !idsToDelete.has(st.id));
               return {
                 ...task,
                 subtasks,
@@ -244,12 +273,23 @@ export const useTaskStore = create<TaskState>()(
 
       calculateTaskProgress: (taskId: string) => {
         const task = get().tasks.find((t) => t.id === taskId);
-        if (!task || task.subtasks.length === 0) {
-          return task?.status === 'done' ? 100 : 0;
+        if (!task) {
+          return 0;
         }
 
-        const completedCount = task.subtasks.filter((st) => st.completed).length;
-        return Math.round((completedCount / task.subtasks.length) * 100);
+        // If task is done, progress is 100%
+        if (task.status === 'done') {
+          return 100;
+        }
+
+        // If no subtasks, return 0
+        if (task.subtasks.length === 0) {
+          return 0;
+        }
+
+        // Build tree and calculate nested progress
+        const tree = buildSubtaskTree(task.subtasks);
+        return calculateNestedProgress(tree);
       },
 
       addNote: (taskId: string, content: string, images: ImageData[] = []) => {
@@ -340,6 +380,88 @@ export const useTaskStore = create<TaskState>()(
               return {
                 ...task,
                 notes,
+                updatedAt: Date.now(),
+              };
+            }
+            return task;
+          }),
+        }));
+      },
+
+      addDependency: (taskId: string, dependencyId: string) => {
+        const tasks = get().tasks;
+        
+        // Check for circular dependencies
+        if (wouldCreateCycle(tasks, taskId, dependencyId)) {
+          console.warn('Cannot add dependency: would create circular reference');
+          return;
+        }
+
+        set((state) => ({
+          tasks: state.tasks.map((task) => {
+            if (task.id === taskId) {
+              const dependencies = task.dependencies.includes(dependencyId)
+                ? task.dependencies
+                : [...task.dependencies, dependencyId];
+              return {
+                ...task,
+                dependencies,
+                updatedAt: Date.now(),
+              };
+            }
+            return task;
+          }),
+        }));
+      },
+
+      removeDependency: (taskId: string, dependencyId: string) => {
+        set((state) => ({
+          tasks: state.tasks.map((task) => {
+            if (task.id === taskId) {
+              return {
+                ...task,
+                dependencies: task.dependencies.filter((id) => id !== dependencyId),
+                updatedAt: Date.now(),
+              };
+            }
+            return task;
+          }),
+        }));
+      },
+
+      addBlockedBy: (taskId: string, blockerId: string) => {
+        const tasks = get().tasks;
+        
+        // Check for circular dependencies
+        if (wouldCreateCycle(tasks, taskId, blockerId)) {
+          console.warn('Cannot add blocker: would create circular reference');
+          return;
+        }
+
+        set((state) => ({
+          tasks: state.tasks.map((task) => {
+            if (task.id === taskId) {
+              const blockedBy = task.blockedBy.includes(blockerId)
+                ? task.blockedBy
+                : [...task.blockedBy, blockerId];
+              return {
+                ...task,
+                blockedBy,
+                updatedAt: Date.now(),
+              };
+            }
+            return task;
+          }),
+        }));
+      },
+
+      removeBlockedBy: (taskId: string, blockerId: string) => {
+        set((state) => ({
+          tasks: state.tasks.map((task) => {
+            if (task.id === taskId) {
+              return {
+                ...task,
+                blockedBy: task.blockedBy.filter((id) => id !== blockerId),
                 updatedAt: Date.now(),
               };
             }

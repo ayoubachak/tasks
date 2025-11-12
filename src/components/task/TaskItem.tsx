@@ -3,9 +3,11 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { DescriptionPreview } from './DescriptionPreview';
+import { SubtaskTree } from '@/components/subtask/SubtaskTree';
 import { format } from 'date-fns';
-import { Edit2, Trash2 } from 'lucide-react';
+import { Edit2, Trash2, Link2, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { Task } from '@/types';
 
 interface TaskItemProps {
@@ -14,7 +16,7 @@ interface TaskItemProps {
 }
 
 export function TaskItem({ task, onEdit }: TaskItemProps) {
-  const { toggleTaskStatus, deleteTask, toggleSubtask } = useTaskStore();
+  const { toggleTaskStatus, deleteTask } = useTaskStore();
 
   const handleToggle = () => {
     toggleTaskStatus(task.id);
@@ -24,10 +26,6 @@ export function TaskItem({ task, onEdit }: TaskItemProps) {
     if (confirm('Are you sure you want to delete this task?')) {
       deleteTask(task.id);
     }
-  };
-
-  const handleSubtaskToggle = (subtaskId: string) => {
-    toggleSubtask(task.id, subtaskId);
   };
 
   const priorityColors: Record<string, string> = {
@@ -92,24 +90,8 @@ export function TaskItem({ task, onEdit }: TaskItemProps) {
           </div>
 
           {task.subtasks.length > 0 && (
-            <div className="mt-3 space-y-1 pl-6">
-              {task.subtasks.map((subtask) => (
-                <div key={subtask.id} className="flex items-center gap-2">
-                  <Checkbox
-                    checked={subtask.completed}
-                    onCheckedChange={() => handleSubtaskToggle(subtask.id)}
-                  />
-                  <span
-                    className={`text-sm ${
-                      subtask.completed
-                        ? 'line-through text-muted-foreground'
-                        : ''
-                    }`}
-                  >
-                    {subtask.title}
-                  </span>
-                </div>
-              ))}
+            <div className="mt-3 pl-2">
+              <SubtaskTree taskId={task.id} subtasks={task.subtasks} />
             </div>
           )}
 
@@ -132,6 +114,36 @@ export function TaskItem({ task, onEdit }: TaskItemProps) {
                 {task.subtasks.filter((st) => st.completed).length}/
                 {task.subtasks.length} subtasks
               </Badge>
+            )}
+            {task.dependencies.length > 0 && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge variant="outline" className="text-xs flex items-center gap-1">
+                      <Link2 className="h-3 w-3" />
+                      {task.dependencies.length} dep{task.dependencies.length > 1 ? 's' : ''}
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Has {task.dependencies.length} dependencies</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+            {task.blockedBy.length > 0 && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge variant="destructive" className="text-xs flex items-center gap-1">
+                      <Lock className="h-3 w-3" />
+                      Blocked
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Blocked by {task.blockedBy.length} task{task.blockedBy.length > 1 ? 's' : ''}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
           </div>
         </div>
