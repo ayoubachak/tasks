@@ -4,6 +4,7 @@ import { useImagePaste } from '@/hooks/useImagePaste';
 import { useImageStore, createImageReference } from '@/stores';
 import { Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { MarkdownToolbar } from './MarkdownToolbar';
 import type { PasteImageResult } from '@/hooks/useImagePaste';
 
 interface MarkdownEditorProps {
@@ -13,6 +14,7 @@ interface MarkdownEditorProps {
   onImagePaste?: (image: PasteImageResult) => void;
   className?: string;
   rows?: number;
+  showToolbar?: boolean;
 }
 
 export function MarkdownEditor({
@@ -22,6 +24,7 @@ export function MarkdownEditor({
   onImagePaste,
   className,
   rows = 10,
+  showToolbar = false,
 }: MarkdownEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isInternalUpdate = useRef(false);
@@ -165,14 +168,70 @@ export function MarkdownEditor({
     e.target.value = ''; // Reset input
   };
 
+  const handleToolbarInsert = (before: string, after: string, placeholder?: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = textarea.value.substring(start, end);
+    const placeholderText = placeholder || selectedText;
+
+    const beforeText = content.substring(0, start);
+    const afterText = content.substring(end);
+
+    const newText = beforeText + before + placeholderText + after + afterText;
+    const newCursorPos = start + before.length + placeholderText.length + after.length;
+
+    isInternalUpdate.current = true;
+    onChange(newText);
+    
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(newCursorPos, newCursorPos);
+    }, 0);
+  };
+
+  const handleToolbarImageUpload = () => {
+    document.getElementById('image-upload')?.click();
+  };
+
   return (
-    <div className={className}>
-      <div className="mb-2 flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <ImageIcon className="h-4 w-4" />
-          <span>Paste images or click to upload</span>
-        </div>
-        <div>
+    <div className={`flex flex-col h-full ${className}`}>
+      {showToolbar && (
+        <MarkdownToolbar
+          onInsert={handleToolbarInsert}
+          onImageUpload={handleToolbarImageUpload}
+        />
+      )}
+      <div className="flex-1 flex flex-col min-h-0">
+        {!showToolbar && (
+          <div className="mb-2 flex items-center justify-between flex-shrink-0">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <ImageIcon className="h-4 w-4" />
+              <span>Paste images or click to upload</span>
+            </div>
+            <div>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleFileInput}
+                className="hidden"
+                id="image-upload"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => document.getElementById('image-upload')?.click()}
+              >
+                <ImageIcon className="mr-2 h-4 w-4" />
+                Upload Image
+              </Button>
+            </div>
+          </div>
+        )}
+        {showToolbar && (
           <input
             type="file"
             accept="image/*"
@@ -180,31 +239,32 @@ export function MarkdownEditor({
             className="hidden"
             id="image-upload"
           />
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => document.getElementById('image-upload')?.click()}
-          >
-            <ImageIcon className="mr-2 h-4 w-4" />
-            Upload Image
-          </Button>
+        )}
+        <div className="flex-1 min-h-0 flex flex-col border rounded-md bg-background overflow-hidden">
+          <Textarea
+            ref={textareaRef}
+            value={content}
+            onChange={(e) => {
+              isInternalUpdate.current = true;
+              onChange(e.target.value);
+            }}
+            placeholder={placeholder}
+            rows={rows}
+            className="font-mono text-sm w-full resize-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none rounded-md flex-1 min-h-0"
+            style={{ 
+              minHeight: `${rows * 1.5}rem`,
+              height: '100%',
+              overflowY: 'auto',
+              overflowX: 'hidden',
+            }}
+          />
         </div>
+        {!showToolbar && (
+          <p className="mt-2 text-xs text-muted-foreground flex-shrink-0">
+            Supports Markdown syntax. Paste images directly or use the upload button. Images are stored with short references (image:abc123) for cleaner editing.
+          </p>
+        )}
       </div>
-      <Textarea
-        ref={textareaRef}
-        value={content}
-        onChange={(e) => {
-          isInternalUpdate.current = true;
-          onChange(e.target.value);
-        }}
-        placeholder={placeholder}
-        rows={rows}
-        className="font-mono text-sm"
-      />
-      <p className="mt-2 text-xs text-muted-foreground">
-        Supports Markdown syntax. Paste images directly or use the upload button. Images are stored with short references (image:abc123) for cleaner editing.
-      </p>
     </div>
   );
 }

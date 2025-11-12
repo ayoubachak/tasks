@@ -20,20 +20,15 @@ function App() {
     }
   }, [activeWorkspaceId, workspaces.length, setActiveWorkspace]);
 
-  // Render different views based on current view state
-  if (currentView === 'description-editor') {
-    return <DescriptionEditorView />;
-  }
-
-  if (currentView === 'note-editor') {
-    return <NoteEditorView />;
-  }
-
-  // Default: List view
+  // Always render the main layout, modals render on top
   return (
-    <AppLayout>
-      <TaskList />
-    </AppLayout>
+    <>
+      <AppLayout>
+        <TaskList />
+      </AppLayout>
+      {currentView === 'description-editor' && <DescriptionEditorView />}
+      {currentView === 'note-editor' && <NoteEditorView />}
+    </>
   );
 }
 

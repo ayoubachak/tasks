@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useTaskStore } from '@/stores';
+import { useTaskStore, useUIStore } from '@/stores';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -25,7 +25,6 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Plus, FileText, Calendar as CalendarIcon, ExternalLink, Repeat, ListChecks, Link2, ListTree, StickyNote, Info } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { useUIStore } from '@/stores';
 import { nanoid } from 'nanoid';
 import type { TaskStatus, Priority, RecurrenceRule, Subtask, Checklist, ChecklistItem, Note } from '@/types';
 
@@ -38,15 +37,10 @@ interface TaskEditorProps {
 export function TaskEditor({ taskId, workspaceId, onClose }: TaskEditorProps) {
   const { 
     createTask, 
-    updateTask, 
+    updateTask,
+    deleteTask,
     getTask, 
-    getTasksByWorkspace,
-    addSubtask,
-    addNote,
-    addChecklist,
-    addChecklistItem,
-    addDependency,
-    addBlockedBy
+    getTasksByWorkspace
   } = useTaskStore();
   const { openDescriptionEditor, openNoteEditor } = useUIStore();
   const task = taskId ? getTask(taskId) : null;
@@ -59,6 +53,9 @@ export function TaskEditor({ taskId, workspaceId, onClose }: TaskEditorProps) {
 
   const [draftTaskId, setDraftTaskId] = useState<string | null>(null);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
+  const draftCreatedRef = useRef(false);
+  const isSavingRef = useRef(false);
+  const savedTaskIdRef = useRef<string | null>(null);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -83,8 +80,54 @@ export function TaskEditor({ taskId, workspaceId, onClose }: TaskEditorProps) {
       setTaskTags(task.tags);
       setRecurrence(task.recurrence);
       setDraftTaskId(null);
-    } else if (!draftTaskId) {
-      // New task - create draft immediately
+      draftCreatedRef.current = false;
+      return;
+    }
+    
+    // For new tasks, check if we've already created/assigned a draft
+    if (draftTaskId) {
+      // Already have a draft ID, verify it still exists
+      const existingDraft = getTask(draftTaskId);
+      if (existingDraft) {
+        return; // Draft exists, nothing to do
+      }
+      // Draft was deleted, reset
+      setDraftTaskId(null);
+      draftCreatedRef.current = false;
+    }
+    
+    // If ref is set, we've already attempted creation (prevent StrictMode double-call)
+    if (draftCreatedRef.current) {
+      return;
+    }
+    
+    // New task - check if draft already exists in store first
+    const currentWorkspaceTasks = getTasksByWorkspace(workspaceId);
+    const existingDrafts = currentWorkspaceTasks.filter(
+      t => t.title === 'Untitled' && 
+      !t.description.trim() && 
+      (t.subtasks?.length || 0) === 0 && 
+      (t.notes?.length || 0) === 0 && 
+      (t.checklists?.length || 0) === 0 &&
+      (t.dependencies?.length || 0) === 0 &&
+      (t.blockedBy?.length || 0) === 0
+    );
+    
+    if (existingDrafts.length > 0) {
+      // Reuse existing draft
+      const existingDraft = existingDrafts[0];
+      draftCreatedRef.current = true;
+      setDraftTaskId(existingDraft.id);
+      setTitle('Untitled');
+      setDescription('');
+      setStatus(existingDraft.status);
+      setPriority(existingDraft.priority);
+      setDueDate(existingDraft.dueDate ? new Date(existingDraft.dueDate) : undefined);
+      setTaskTags(existingDraft.tags);
+      setRecurrence(existingDraft.recurrence);
+    } else {
+      // Create new draft - set ref FIRST to prevent duplicate creation
+      draftCreatedRef.current = true;
       const draftTask = createTask(workspaceId, 'Untitled', '');
       setDraftTaskId(draftTask.id);
       setTitle('Untitled');
@@ -95,7 +138,7 @@ export function TaskEditor({ taskId, workspaceId, onClose }: TaskEditorProps) {
       setTaskTags([]);
       setRecurrence(undefined);
     }
-  }, [task, draftTaskId, workspaceId, createTask]);
+  }, [task, workspaceId, draftTaskId, createTask, getTask, getTasksByWorkspace]);
 
   // Auto-update draft task as user types (only for drafts, not existing tasks)
   useEffect(() => {
@@ -136,9 +179,16 @@ export function TaskEditor({ taskId, workspaceId, onClose }: TaskEditorProps) {
 
     if (!currentTask) return;
 
+    // Mark that we're saving, not canceling - do this FIRST
+    isSavingRef.current = true;
+    const taskIdToSave = currentTask.id;
+    savedTaskIdRef.current = taskIdToSave; // Track which task we're saving
+
     // Update the task (draft or existing)
+    // If user clicks "Save", they want to keep the task even if it's still "Untitled"
     const finalTitle = title.trim() || 'Untitled';
-    updateTask(currentTask.id, {
+    
+    updateTask(taskIdToSave, {
       title: finalTitle,
       description: description.trim(),
       status,
@@ -148,33 +198,90 @@ export function TaskEditor({ taskId, workspaceId, onClose }: TaskEditorProps) {
       recurrence,
     });
 
-    // If it's a draft with just "Untitled" and no content, delete it
-    if (draftTaskId && finalTitle === 'Untitled' && !description.trim() && 
-        currentTask.subtasks.length === 0 && currentTask.notes.length === 0 && 
-        currentTask.checklists.length === 0) {
-      deleteTask(currentTask.id);
-    }
-
-    onClose();
+    // Reset draft tracking since we're saving
+    draftCreatedRef.current = false;
+    setDraftTaskId(null);
+    
+    // Close the dialog by calling handleClose, which will see isSavingRef and skip deletion
+    handleClose(false);
   };
 
-  // Handle closing - delete draft if empty
-  const handleClose = () => {
-    if (draftTaskId && currentTask) {
-      const isEmpty = (currentTask.title === 'Untitled' || !currentTask.title.trim()) &&
-                      !currentTask.description.trim() &&
-                      currentTask.subtasks.length === 0 &&
-                      currentTask.notes.length === 0 &&
-                      currentTask.checklists.length === 0 &&
-                      currentTask.dependencies.length === 0 &&
-                      currentTask.blockedBy.length === 0;
-      
-      if (isEmpty) {
-        deleteTask(currentTask.id);
+  // Handle closing - delete draft if empty (only when canceling, not saving)
+  const handleClose = (open?: boolean) => {
+    // If dialog is being opened, do nothing
+    if (open === true) return;
+    
+    // If we're saving, don't delete the task - just close
+    // Also check if this is the task we just saved (even if isSavingRef was reset)
+    const currentDraftId = draftTaskId;
+    const savedId = savedTaskIdRef.current;
+    const isSaving = isSavingRef.current || (savedId !== null && currentDraftId === savedId);
+    
+    if (isSaving) {
+      // Don't reset refs yet - keep them until component unmounts to prevent deletion on subsequent calls
+      draftCreatedRef.current = false;
+      setDraftTaskId(null);
+      onClose();
+      return;
+    }
+
+    // Only delete empty drafts when canceling (and not the task we just saved)
+    if (currentDraftId && currentDraftId !== savedId) {
+      const taskToDelete = getTask(currentDraftId);
+      if (taskToDelete) {
+        const isEmpty = (taskToDelete.title === 'Untitled' || !taskToDelete.title.trim()) &&
+                        !taskToDelete.description.trim() &&
+                        (taskToDelete.subtasks?.length || 0) === 0 &&
+                        (taskToDelete.notes?.length || 0) === 0 &&
+                        (taskToDelete.checklists?.length || 0) === 0 &&
+                        (taskToDelete.dependencies?.length || 0) === 0 &&
+                        (taskToDelete.blockedBy?.length || 0) === 0;
+        
+        if (isEmpty) {
+          deleteTask(taskToDelete.id);
+        }
       }
     }
+    draftCreatedRef.current = false;
+    setDraftTaskId(null);
+    // Only reset savedTaskIdRef if we're not saving
+    if (!isSaving) {
+      savedTaskIdRef.current = null;
+    }
     onClose();
   };
+
+  // Cleanup on unmount - delete empty draft if component unmounts (only if not saving)
+  useEffect(() => {
+    const currentDraftId = draftTaskId;
+    const savedId = savedTaskIdRef.current;
+    return () => {
+      // Don't delete if we're saving or if this is the task we just saved
+      if (isSavingRef.current || (savedId !== null && currentDraftId === savedId)) {
+        isSavingRef.current = false;
+        savedTaskIdRef.current = null;
+        return;
+      }
+      
+      if (currentDraftId && !task && currentDraftId !== savedId) {
+        const taskToDelete = getTask(currentDraftId);
+        if (taskToDelete) {
+          const isEmpty = (taskToDelete.title === 'Untitled' || !taskToDelete.title.trim()) &&
+                          !taskToDelete.description.trim() &&
+                          (taskToDelete.subtasks?.length || 0) === 0 &&
+                          (taskToDelete.notes?.length || 0) === 0 &&
+                          (taskToDelete.checklists?.length || 0) === 0 &&
+                          (taskToDelete.dependencies?.length || 0) === 0 &&
+                          (taskToDelete.blockedBy?.length || 0) === 0;
+          
+          if (isEmpty) {
+            deleteTask(taskToDelete.id);
+          }
+        }
+      }
+      draftCreatedRef.current = false;
+    };
+  }, [draftTaskId, task, getTask, deleteTask]);
 
   if (!currentTask) {
     // Still creating draft, show loading or return null
@@ -230,39 +337,27 @@ export function TaskEditor({ taskId, workspaceId, onClose }: TaskEditorProps) {
                         if (description !== currentTask.description) {
                           updateTask(currentTask.id, { description });
                         }
-                        handleClose();
                         openDescriptionEditor(currentTask.id, workspaceId);
                       }}
                     >
                       <ExternalLink className="mr-2 h-4 w-4" />
-                      Full Editor
+                      Open Editor
                     </Button>
                   </div>
                   <Textarea
                     id="description"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Quick description (use 'Full Editor' for Markdown with images)..."
+                    placeholder="Quick description (click 'Open Editor' for full Markdown editor with formatting toolbar)..."
                     rows={4}
+                    className="resize-none overflow-y-auto"
+                    style={{ 
+                      fieldSizing: 'fixed',
+                      height: '6rem',
+                      maxHeight: '6rem',
+                      minHeight: '6rem'
+                    } as React.CSSProperties}
                   />
-                  {description && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="w-full"
-                      onClick={() => {
-                        if (description !== currentTask.description) {
-                          updateTask(currentTask.id, { description });
-                        }
-                        handleClose();
-                        openDescriptionEditor(currentTask.id, workspaceId);
-                      }}
-                    >
-                      <ExternalLink className="mr-2 h-4 w-4" />
-                      Open Full Editor
-                    </Button>
-                  )}
                 </div>
               </div>
 
@@ -408,7 +503,6 @@ export function TaskEditor({ taskId, workspaceId, onClose }: TaskEditorProps) {
                           size="sm"
                           className="w-full"
                           onClick={() => {
-                            handleClose();
                             openNoteEditor(currentTask.id, null, workspaceId);
                           }}
                         >
@@ -424,7 +518,6 @@ export function TaskEditor({ taskId, workspaceId, onClose }: TaskEditorProps) {
                                 key={note.id}
                                 className="flex items-start justify-between rounded-md border p-3 text-sm hover:bg-accent/50 cursor-pointer transition-colors"
                                 onClick={() => {
-                                  handleClose();
                                   openNoteEditor(currentTask.id, note.id, workspaceId);
                                 }}
                               >
@@ -449,7 +542,6 @@ export function TaskEditor({ taskId, workspaceId, onClose }: TaskEditorProps) {
                                   className="ml-2"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleClose();
                                     openNoteEditor(currentTask.id, note.id, workspaceId);
                                   }}
                                 >

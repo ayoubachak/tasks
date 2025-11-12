@@ -88,6 +88,7 @@ export function TaskList() {
 
       {isEditorOpen && (
         <TaskEditor
+          key={editingTaskId || 'new-task'} // Force remount when switching between new/edit
           taskId={editingTaskId}
           workspaceId={activeWorkspace.id}
           onClose={handleCloseEditor}
