@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { nanoid } from 'nanoid';
-import type { Task, TaskStatus, Priority, Subtask } from '@/types';
+import type { Task, TaskStatus, Priority, Subtask, Note, ImageData } from '@/types';
 
 interface TaskState {
   tasks: Task[];
@@ -22,6 +22,10 @@ interface TaskState {
   deleteSubtask: (taskId: string, subtaskId: string) => void;
   toggleSubtask: (taskId: string, subtaskId: string) => void;
   calculateTaskProgress: (taskId: string) => number;
+  addNote: (taskId: string, content: string, images?: ImageData[]) => Note;
+  updateNote: (taskId: string, noteId: string, content: string) => void;
+  deleteNote: (taskId: string, noteId: string) => void;
+  pinNote: (taskId: string, noteId: string, pinned: boolean) => void;
 }
 
 const createDefaultTask = (
@@ -246,6 +250,102 @@ export const useTaskStore = create<TaskState>()(
 
         const completedCount = task.subtasks.filter((st) => st.completed).length;
         return Math.round((completedCount / task.subtasks.length) * 100);
+      },
+
+      addNote: (taskId: string, content: string, images: ImageData[] = []) => {
+        const now = Date.now();
+        const note: Note = {
+          id: nanoid(),
+          taskId,
+          content,
+          version: 1,
+          images,
+          createdAt: now,
+          updatedAt: now,
+          pinned: false,
+          tags: [],
+        };
+
+        set((state) => ({
+          tasks: state.tasks.map((task) => {
+            if (task.id === taskId) {
+              return {
+                ...task,
+                notes: [...task.notes, note],
+                updatedAt: Date.now(),
+              };
+            }
+            return task;
+          }),
+        }));
+
+        return note;
+      },
+
+      updateNote: (taskId: string, noteId: string, content: string) => {
+        set((state) => ({
+          tasks: state.tasks.map((task) => {
+            if (task.id === taskId) {
+              const notes = task.notes.map((note) => {
+                if (note.id === noteId) {
+                  return {
+                    ...note,
+                    content,
+                    version: note.version + 1,
+                    previousVersionId: note.id,
+                    updatedAt: Date.now(),
+                  };
+                }
+                return note;
+              });
+              return {
+                ...task,
+                notes,
+                updatedAt: Date.now(),
+              };
+            }
+            return task;
+          }),
+        }));
+      },
+
+      deleteNote: (taskId: string, noteId: string) => {
+        set((state) => ({
+          tasks: state.tasks.map((task) => {
+            if (task.id === taskId) {
+              return {
+                ...task,
+                notes: task.notes.filter((note) => note.id !== noteId),
+                updatedAt: Date.now(),
+              };
+            }
+            return task;
+          }),
+        }));
+      },
+
+      pinNote: (taskId: string, noteId: string, pinned: boolean) => {
+        set((state) => ({
+          tasks: state.tasks.map((task) => {
+            if (task.id === taskId) {
+              const notes = task.notes.map((note) =>
+                note.id === noteId ? { ...note, pinned } : note
+              );
+              // Sort: pinned notes first
+              notes.sort((a, b) => {
+                if (a.pinned && !b.pinned) return -1;
+                if (!a.pinned && b.pinned) return 1;
+                return b.createdAt - a.createdAt;
+              });
+              return {
+                ...task,
+                notes,
+                updatedAt: Date.now(),
+              };
+            }
+            return task;
+          }),
+        }));
       },
     }),
     {

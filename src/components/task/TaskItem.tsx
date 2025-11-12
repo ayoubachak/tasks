@@ -2,6 +2,7 @@ import { useTaskStore } from '@/stores';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { DescriptionPreview } from './DescriptionPreview';
 import { format } from 'date-fns';
 import { Edit2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -56,9 +57,12 @@ export function TaskItem({ task, onEdit }: TaskItemProps) {
                 {task.title}
               </h3>
               {task.description && (
-                <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
-                  {task.description}
-                </p>
+                <div className="mt-1">
+                  <DescriptionPreview 
+                    content={task.description} 
+                    maxLines={2}
+                  />
+                </div>
               )}
             </div>
             <div className="flex items-center gap-2">
