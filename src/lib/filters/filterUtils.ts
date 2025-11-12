@@ -198,6 +198,20 @@ export function createQuickFilters(): Array<{ id: string; label: string; filters
         { id: 'no-due', field: 'dueDate', operator: 'isNull', value: null },
       ],
     },
+    {
+      id: 'archived',
+      label: 'Archived',
+      filters: [
+        { id: 'status-archived', field: 'status', operator: 'equals', value: 'archived' },
+      ],
+    },
+    {
+      id: 'notArchived',
+      label: 'Hide Archived',
+      filters: [
+        { id: 'status-not-archived', field: 'status', operator: 'notIn', value: ['archived'] },
+      ],
+    },
   ];
 }
 

@@ -22,9 +22,10 @@ import { Calendar } from '@/components/ui/calendar';
 import { TagPicker } from '@/components/tags/TagPicker';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Plus, FileText, Calendar as CalendarIcon, ExternalLink, Repeat, ListChecks, Link2, ListTree, StickyNote, Info } from 'lucide-react';
+import { Plus, FileText, Calendar as CalendarIcon, ExternalLink, Repeat, ListChecks, Link2, ListTree, StickyNote, Info, Clock, Bell, Play } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { formatTime, parseTime, formatTimeForInput } from '@/lib/utils/timeFormat';
 import { nanoid } from 'nanoid';
 import type { TaskStatus, Priority, RecurrenceRule, Subtask, Checklist, ChecklistItem, Note } from '@/types';
 
@@ -62,6 +63,10 @@ export function TaskEditor({ taskId, workspaceId, onClose }: TaskEditorProps) {
   const [status, setStatus] = useState<TaskStatus>('todo');
   const [priority, setPriority] = useState<Priority>('none');
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [reminderDate, setReminderDate] = useState<Date | undefined>(undefined);
+  const [estimatedTime, setEstimatedTime] = useState<string>('');
+  const [actualTime, setActualTime] = useState<string>('');
   const [taskTags, setTaskTags] = useState<string[]>([]);
   const [recurrence, setRecurrence] = useState<RecurrenceRule | undefined>(undefined);
 
@@ -77,6 +82,10 @@ export function TaskEditor({ taskId, workspaceId, onClose }: TaskEditorProps) {
       setStatus(task.status);
       setPriority(task.priority);
       setDueDate(task.dueDate ? new Date(task.dueDate) : undefined);
+      setStartDate(task.startDate ? new Date(task.startDate) : undefined);
+      setReminderDate(task.reminderDate ? new Date(task.reminderDate) : undefined);
+      setEstimatedTime(task.estimatedTime ? formatTimeForInput(task.estimatedTime) : '');
+      setActualTime(task.actualTime ? formatTimeForInput(task.actualTime) : '');
       setTaskTags(task.tags);
       setRecurrence(task.recurrence);
       setDraftTaskId(null);
@@ -123,6 +132,10 @@ export function TaskEditor({ taskId, workspaceId, onClose }: TaskEditorProps) {
       setStatus(existingDraft.status);
       setPriority(existingDraft.priority);
       setDueDate(existingDraft.dueDate ? new Date(existingDraft.dueDate) : undefined);
+      setStartDate(existingDraft.startDate ? new Date(existingDraft.startDate) : undefined);
+      setReminderDate(existingDraft.reminderDate ? new Date(existingDraft.reminderDate) : undefined);
+      setEstimatedTime(existingDraft.estimatedTime ? formatTimeForInput(existingDraft.estimatedTime) : '');
+      setActualTime(existingDraft.actualTime ? formatTimeForInput(existingDraft.actualTime) : '');
       setTaskTags(existingDraft.tags);
       setRecurrence(existingDraft.recurrence);
     } else {
@@ -135,6 +148,10 @@ export function TaskEditor({ taskId, workspaceId, onClose }: TaskEditorProps) {
       setStatus('todo');
       setPriority('none');
       setDueDate(undefined);
+      setStartDate(undefined);
+      setReminderDate(undefined);
+      setEstimatedTime('');
+      setActualTime('');
       setTaskTags([]);
       setRecurrence(undefined);
     }
@@ -156,6 +173,10 @@ export function TaskEditor({ taskId, workspaceId, onClose }: TaskEditorProps) {
         (taskToUpdate.priority !== priority) ||
         (JSON.stringify(taskToUpdate.tags || []) !== JSON.stringify(taskTags)) ||
         (taskToUpdate.dueDate !== (dueDate ? dueDate.getTime() : undefined)) ||
+        (taskToUpdate.startDate !== (startDate ? startDate.getTime() : undefined)) ||
+        (taskToUpdate.reminderDate !== (reminderDate ? reminderDate.getTime() : undefined)) ||
+        (taskToUpdate.estimatedTime !== (estimatedTime ? parseTime(estimatedTime) : undefined)) ||
+        (taskToUpdate.actualTime !== (actualTime ? parseTime(actualTime) : undefined)) ||
         (JSON.stringify(taskToUpdate.recurrence || null) !== JSON.stringify(recurrence || null));
       
       if (hasChanges) {
@@ -166,13 +187,17 @@ export function TaskEditor({ taskId, workspaceId, onClose }: TaskEditorProps) {
           priority,
           tags: taskTags,
           dueDate: dueDate ? dueDate.getTime() : undefined,
+          startDate: startDate ? startDate.getTime() : undefined,
+          reminderDate: reminderDate ? reminderDate.getTime() : undefined,
+          estimatedTime: estimatedTime ? parseTime(estimatedTime) : undefined,
+          actualTime: actualTime ? parseTime(actualTime) : undefined,
           recurrence,
         });
       }
     }, 300); // Debounce 300ms
 
     return () => clearTimeout(timeoutId);
-  }, [title, description, status, priority, taskTags, dueDate, recurrence, draftTaskId, task, getTask, updateTask]);
+  }, [title, description, status, priority, taskTags, dueDate, startDate, reminderDate, estimatedTime, actualTime, recurrence, draftTaskId, task, getTask, updateTask]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -195,6 +220,10 @@ export function TaskEditor({ taskId, workspaceId, onClose }: TaskEditorProps) {
       priority,
       tags: taskTags,
       dueDate: dueDate ? dueDate.getTime() : undefined,
+      startDate: startDate ? startDate.getTime() : undefined,
+      reminderDate: reminderDate ? reminderDate.getTime() : undefined,
+      estimatedTime: estimatedTime ? parseTime(estimatedTime) : undefined,
+      actualTime: actualTime ? parseTime(actualTime) : undefined,
       recurrence,
     });
 
@@ -395,8 +424,48 @@ export function TaskEditor({ taskId, workspaceId, onClose }: TaskEditorProps) {
                 </div>
               </div>
 
-              {/* Due Date and Tags */}
+              {/* Dates */}
               <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Start Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className={cn(
+                          'w-full justify-start text-left font-normal',
+                          !startDate && 'text-muted-foreground'
+                        )}
+                      >
+                        <Play className="mr-2 h-4 w-4" />
+                        {startDate ? format(startDate, 'PPP') : <span>Pick start date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={startDate}
+                        onSelect={setStartDate}
+                        initialFocus
+                      />
+                      {startDate && (
+                        <div className="p-3 border-t">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="w-full"
+                            onClick={() => setStartDate(undefined)}
+                          >
+                            Clear date
+                          </Button>
+                        </div>
+                      )}
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
                 <div className="space-y-2">
                   <Label>Due Date</Label>
                   <Popover>
@@ -436,15 +505,100 @@ export function TaskEditor({ taskId, workspaceId, onClose }: TaskEditorProps) {
                     </PopoverContent>
                   </Popover>
                 </div>
+              </div>
+
+              {/* Reminder */}
+              <div className="space-y-2">
+                <Label>Reminder</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className={cn(
+                        'w-full justify-start text-left font-normal',
+                        !reminderDate && 'text-muted-foreground'
+                      )}
+                    >
+                      <Bell className="mr-2 h-4 w-4" />
+                      {reminderDate ? format(reminderDate, 'PPP p') : <span>Set reminder</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={reminderDate}
+                      onSelect={setReminderDate}
+                      initialFocus
+                    />
+                    {reminderDate && (
+                      <div className="p-3 border-t">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="w-full"
+                          onClick={() => setReminderDate(undefined)}
+                        >
+                          Clear reminder
+                        </Button>
+                      </div>
+                    )}
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {/* Time Tracking */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="estimatedTime">Estimated Time</Label>
+                  <div className="relative">
+                    <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="estimatedTime"
+                      type="text"
+                      value={estimatedTime}
+                      onChange={(e) => setEstimatedTime(e.target.value)}
+                      placeholder="e.g., 2h 30m, 45m, 1d"
+                      className="pl-9"
+                    />
+                  </div>
+                  {estimatedTime && (
+                    <p className="text-xs text-muted-foreground">
+                      {formatTime(parseTime(estimatedTime))}
+                    </p>
+                  )}
+                </div>
 
                 <div className="space-y-2">
-                  <Label>Tags</Label>
-                  <TagPicker
-                    tags={taskTags}
-                    availableTags={allTags}
-                    onChange={setTaskTags}
-                  />
+                  <Label htmlFor="actualTime">Actual Time</Label>
+                  <div className="relative">
+                    <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="actualTime"
+                      type="text"
+                      value={actualTime}
+                      onChange={(e) => setActualTime(e.target.value)}
+                      placeholder="e.g., 2h 30m, 45m"
+                      className="pl-9"
+                    />
+                  </div>
+                  {actualTime && (
+                    <p className="text-xs text-muted-foreground">
+                      {formatTime(parseTime(actualTime))}
+                    </p>
+                  )}
                 </div>
+              </div>
+
+              {/* Tags */}
+              <div className="space-y-2">
+                <Label>Tags</Label>
+                <TagPicker
+                  tags={taskTags}
+                  availableTags={allTags}
+                  onChange={setTaskTags}
+                />
               </div>
 
               {/* Recurrence */}

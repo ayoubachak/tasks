@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useTaskStore } from '@/stores';
+import { useState, useEffect } from 'react';
+import { useTaskStore, useNoteHistoryStore } from '@/stores';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { MarkdownViewer } from './MarkdownViewer';
@@ -17,28 +17,48 @@ interface NoteHistoryProps {
 }
 
 export function NoteHistory({ taskId, noteId, open, onClose, onRestore }: NoteHistoryProps) {
-  const { getTask } = useTaskStore();
+  const { getTask, updateNote } = useTaskStore();
+  const { getHistory } = useNoteHistoryStore();
   const task = getTask(taskId);
   const note = task?.notes.find((n) => n.id === noteId);
   const [selectedVersion, setSelectedVersion] = useState<number | null>(null);
+  
+  // Get history from store
+  const historyVersions = note ? getHistory(noteId) : [];
+  
+  // Combine current note with history
+  const allVersions = note
+    ? [
+        {
+          version: note.version,
+          content: note.content,
+          updatedAt: note.updatedAt,
+          isCurrent: true,
+        },
+        ...historyVersions.filter((v) => v.version !== note.version),
+      ].sort((a, b) => b.version - a.version)
+    : [];
+
+  // Select current version by default
+  useEffect(() => {
+    if (open && note && selectedVersion === null) {
+      setSelectedVersion(note.version);
+    }
+  }, [open, note, selectedVersion]);
 
   if (!note) return null;
 
-  // Build version history (simplified - in real app, we'd store full history)
-  // For now, we show the current version and indicate it's version X
-  const versions = [
-    {
-      version: note.version,
-      content: note.content,
-      updatedAt: note.updatedAt,
-      isCurrent: true,
-    },
-  ];
-
   const handleRestore = () => {
-    if (selectedVersion !== null && onRestore) {
-      onRestore(selectedVersion);
+    if (selectedVersion === null) return;
+    
+    const versionToRestore = allVersions.find((v) => v.version === selectedVersion);
+    if (versionToRestore && versionToRestore.version !== note.version) {
+      // Restore the content
+      updateNote(taskId, noteId, versionToRestore.content);
       onClose();
+      if (onRestore) {
+        onRestore(selectedVersion);
+      }
     }
   };
 
@@ -63,35 +83,36 @@ export function NoteHistory({ taskId, noteId, open, onClose, onRestore }: NoteHi
             </div>
             <ScrollArea className="flex-1">
               <div className="p-2 space-y-2">
-                {versions.map((v) => (
-                  <button
-                    key={v.version}
-                    onClick={() => setSelectedVersion(v.version)}
-                    className={`w-full text-left p-3 rounded-md border transition-colors ${
-                      selectedVersion === v.version
-                        ? 'bg-primary text-primary-foreground border-primary'
-                        : 'hover:bg-accent'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-medium text-sm">
-                          Version {v.version}
-                          {v.isCurrent && (
-                            <span className="ml-2 text-xs opacity-75">(Current)</span>
-                          )}
-                        </div>
-                        <div className="text-xs opacity-75 mt-1">
-                          {format(v.updatedAt, 'MMM d, yyyy HH:mm')}
+                {allVersions.length === 0 ? (
+                  <div className="text-sm text-muted-foreground p-3 text-center">
+                    No history available
+                  </div>
+                ) : (
+                  allVersions.map((v) => (
+                    <button
+                      key={v.version}
+                      onClick={() => setSelectedVersion(v.version)}
+                      className={`w-full text-left p-3 rounded-md border transition-colors ${
+                        selectedVersion === v.version
+                          ? 'bg-primary text-primary-foreground border-primary'
+                          : 'hover:bg-accent'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-medium text-sm">
+                            Version {v.version}
+                            {v.isCurrent && (
+                              <span className="ml-2 text-xs opacity-75">(Current)</span>
+                            )}
+                          </div>
+                          <div className="text-xs opacity-75 mt-1">
+                            {format(v.updatedAt, 'MMM d, yyyy HH:mm')}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </button>
-                ))}
-                {versions.length === 1 && (
-                  <div className="text-sm text-muted-foreground p-3 text-center">
-                    Only current version available. History will be available after edits.
-                  </div>
+                    </button>
+                  ))
                 )}
               </div>
             </ScrollArea>
@@ -115,9 +136,16 @@ export function NoteHistory({ taskId, noteId, open, onClose, onRestore }: NoteHi
             <ScrollArea className="flex-1">
               <div className="p-4">
                 {selectedVersion !== null ? (
-                  <MarkdownViewer
-                    content={versions.find((v) => v.version === selectedVersion)?.content || ''}
-                  />
+                  <>
+                    <MarkdownViewer
+                      content={allVersions.find((v) => v.version === selectedVersion)?.content || ''}
+                    />
+                    {selectedVersion !== note.version && (
+                      <div className="mt-4 p-3 bg-muted rounded-md text-sm text-muted-foreground">
+                        This is an older version. Click "Restore" to make it the current version.
+                      </div>
+                    )}
+                  </>
                 ) : (
                   <div className="text-center text-muted-foreground py-8">
                     Select a version to view its content

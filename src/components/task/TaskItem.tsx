@@ -6,10 +6,11 @@ import { DescriptionPreview } from './DescriptionPreview';
 import { SubtaskTree } from '@/components/subtask/SubtaskTree';
 import { formatRecurrenceRule } from '@/lib/recurrence/recurrenceUtils';
 import { format } from 'date-fns';
-import { Edit2, Trash2, Link2, Lock, Repeat } from 'lucide-react';
+import { Edit2, Trash2, Link2, Lock, Repeat, Clock, Bell, Play, Archive, ArchiveRestore } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import { formatTime } from '@/lib/utils/timeFormat';
 import type { Task } from '@/types';
 
 interface TaskItemProps {
@@ -18,7 +19,7 @@ interface TaskItemProps {
 }
 
 export function TaskItem({ task, onEdit }: TaskItemProps) {
-  const { toggleTaskStatus, deleteTask } = useTaskStore();
+  const { toggleTaskStatus, deleteTask, updateTask } = useTaskStore();
   const { isSelectionMode, isSelected, toggleSelection } = useSelectionStore();
   const isTaskSelected = isSelected(task.id);
 
@@ -30,6 +31,14 @@ export function TaskItem({ task, onEdit }: TaskItemProps) {
     if (confirm('Are you sure you want to delete this task?')) {
       deleteTask(task.id);
     }
+  };
+
+  const handleArchive = () => {
+    updateTask(task.id, { status: 'archived' });
+  };
+
+  const handleUnarchive = () => {
+    updateTask(task.id, { status: 'todo' });
   };
 
   const priorityColors: Record<string, string> = {
@@ -109,6 +118,33 @@ export function TaskItem({ task, onEdit }: TaskItemProps) {
               )}
               {!isSelectionMode && (
                 <>
+                  {task.status === 'archived' ? (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleUnarchive();
+                      }}
+                      title="Unarchive"
+                    >
+                      <ArchiveRestore className="h-4 w-4" />
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleArchive();
+                      }}
+                      title="Archive"
+                    >
+                      <Archive className="h-4 w-4" />
+                    </Button>
+                  )}
                   <Button
                     variant="ghost"
                     size="icon"
@@ -148,6 +184,21 @@ export function TaskItem({ task, onEdit }: TaskItemProps) {
                 {tag}
               </Badge>
             ))}
+            {task.startDate && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge variant="outline" className="text-xs flex items-center gap-1">
+                      <Play className="h-3 w-3" />
+                      {format(task.startDate, 'MMM d')}
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Start: {format(task.startDate, 'MMM d, yyyy')}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
             {task.dueDate && (
               <Badge
                 variant={task.dueDate < Date.now() ? 'destructive' : 'outline'}
@@ -155,6 +206,57 @@ export function TaskItem({ task, onEdit }: TaskItemProps) {
               >
                 {format(task.dueDate, 'MMM d, yyyy')}
               </Badge>
+            )}
+            {task.reminderDate && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge 
+                      variant={task.reminderDate < Date.now() ? 'destructive' : 'outline'} 
+                      className="text-xs flex items-center gap-1"
+                    >
+                      <Bell className="h-3 w-3" />
+                      {format(task.reminderDate, 'MMM d')}
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Reminder: {format(task.reminderDate, 'MMM d, yyyy p')}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+            {task.estimatedTime && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge variant="outline" className="text-xs flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      Est: {formatTime(task.estimatedTime)}
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Estimated: {formatTime(task.estimatedTime)}</p>
+                    {task.actualTime && (
+                      <p>Actual: {formatTime(task.actualTime)}</p>
+                    )}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+            {task.actualTime && !task.estimatedTime && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge variant="outline" className="text-xs flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {formatTime(task.actualTime)}
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Actual time: {formatTime(task.actualTime)}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
             {task.subtasks.length > 0 && (
               <Badge variant="outline" className="text-xs">

@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Edit, Tag, Archive, X } from 'lucide-react';
+import { Trash2, Edit, Tag, Archive, ArchiveRestore, X } from 'lucide-react';
 import { useSelectionStore } from '@/stores/selectionStore';
 import { useTaskStore } from '@/stores';
 import {
@@ -34,6 +34,13 @@ export function BulkActionsBar({ onBatchEdit }: BulkActionsBarProps) {
   const handleArchive = () => {
     selectedTaskIds.forEach((taskId) => {
       updateTask(taskId, { status: 'archived' });
+    });
+    clearSelection();
+  };
+
+  const handleUnarchive = () => {
+    selectedTaskIds.forEach((taskId) => {
+      updateTask(taskId, { status: 'todo' });
     });
     clearSelection();
   };
@@ -82,6 +89,10 @@ export function BulkActionsBar({ onBatchEdit }: BulkActionsBarProps) {
           <DropdownMenuItem onClick={handleArchive}>
             <Archive className="mr-2 h-4 w-4" />
             Archive
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleUnarchive}>
+            <ArchiveRestore className="mr-2 h-4 w-4" />
+            Unarchive
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleDelete} className="text-destructive">

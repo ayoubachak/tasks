@@ -4,6 +4,7 @@ import { nanoid } from 'nanoid';
 import { buildSubtaskTree, calculateNestedProgress, getSubtaskDescendants } from '@/lib/subtasks/treeUtils';
 import { wouldCreateCycle } from '@/lib/dependencies/dependencyUtils';
 import { getNextOccurrence, shouldCreateRecurrence } from '@/lib/recurrence/recurrenceUtils';
+import { useNoteHistoryStore } from './noteHistoryStore';
 import type { Task, TaskStatus, Priority, Subtask, Note, ImageData, RecurrenceRule } from '@/types';
 
 interface TaskState {
@@ -340,11 +341,15 @@ export const useTaskStore = create<TaskState>()(
       },
 
       updateNote: (taskId: string, noteId: string, content: string) => {
-        set((state) => ({
-          tasks: state.tasks.map((task) => {
+        set((state) => {
+          const updatedTasks = state.tasks.map((task) => {
             if (task.id === taskId) {
               const notes = task.notes.map((note) => {
                 if (note.id === noteId) {
+                  // Save current version to history before updating
+                  const historyStore = useNoteHistoryStore.getState();
+                  historyStore.saveVersion(note);
+                  
                   return {
                     ...note,
                     content,
@@ -362,8 +367,20 @@ export const useTaskStore = create<TaskState>()(
               };
             }
             return task;
-          }),
-        }));
+          });
+          
+          // Save new version to history
+          const task = updatedTasks.find((t) => t.id === taskId);
+          if (task) {
+            const note = task.notes.find((n) => n.id === noteId);
+            if (note) {
+              const historyStore = useNoteHistoryStore.getState();
+              historyStore.saveVersion(note);
+            }
+          }
+          
+          return { tasks: updatedTasks };
+        });
       },
 
       deleteNote: (taskId: string, noteId: string) => {

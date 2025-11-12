@@ -11,17 +11,19 @@ import { useTaskFilters } from '@/hooks/useTaskFilters';
 import { SearchBar } from '@/components/filters/SearchBar';
 import { FilterBar } from '@/components/filters/FilterBar';
 import { SortMenu } from '@/components/filters/SortMenu';
+import { GroupByMenu } from '@/components/filters/GroupByMenu';
 import { ViewSwitcher } from '@/components/filters/ViewSwitcher';
 import { BoardView } from '@/components/views/BoardView';
 import { CalendarView } from '@/components/views/CalendarView';
 import { SortableListView } from '@/components/views/SortableListView';
+import { GroupedListView } from '@/components/views/GroupedListView';
 import { StatsDashboard } from '@/components/analytics/StatsDashboard';
 import { BulkActionsBar } from '@/components/bulk/BulkActionsBar';
 
 export function TaskList() {
   const { getActiveWorkspace } = useWorkspaceStore();
   const { getTasksByWorkspace } = useTaskStore();
-  const { currentView, filters, sortBy, searchQuery } = useViewStore();
+  const { currentView, filters, sortBy, searchQuery, groupBy } = useViewStore();
   const { isSelectionMode, setSelectionMode, selectAll, getSelectedCount } = useSelectionStore();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
@@ -115,6 +117,10 @@ export function TaskList() {
         return <StatsDashboard />;
       case 'list':
       default:
+        // Use grouped view when groupBy is set
+        if (groupBy !== 'none') {
+          return <GroupedListView tasks={filteredTasks} groupBy={groupBy} sortBy={sortBy} onEditTask={handleEditTask} />;
+        }
         // Use sortable list when no filters/search are active for drag & drop reordering
         if (filters.length === 0 && !searchQuery) {
           return <SortableListView tasks={filteredTasks} onEditTask={handleEditTask} />;
@@ -190,8 +196,9 @@ export function TaskList() {
             <SearchBar />
           </div>
           <div className="flex items-center gap-2">
-            <ViewSwitcher />
-            <SortMenu />
+          <ViewSwitcher />
+          <GroupByMenu />
+          <SortMenu />
           </div>
         </div>
         <FilterBar />
