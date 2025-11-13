@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useWorkspaceStore, useTaskStore } from '@/stores';
-import { Plus, Folder, MoreVertical, Edit, Trash2, Palette, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Folder, MoreVertical, Edit, Trash2, Palette, ChevronLeft, ChevronRight, CheckSquare, Square, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
@@ -14,7 +15,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { WorkspaceEditor } from '@/components/workspace/WorkspaceEditor';
-import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { toast } from '@/lib/toast';
 
 const colorPresets = [
   '#3b82f6', // blue
@@ -45,6 +47,8 @@ export function Sidebar({ collapsed = false, onToggleCollapse, mobileOpen = fals
   const [editingWorkspaceId, setEditingWorkspaceId] = useState<string | null>(null);
   const [colorPickerOpen, setColorPickerOpen] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedWorkspaceIds, setSelectedWorkspaceIds] = useState<Set<string>>(new Set());
 
   const handleCreateWorkspace = () => {
     setEditingWorkspaceId(null);
@@ -77,6 +81,11 @@ export function Sidebar({ collapsed = false, onToggleCollapse, mobileOpen = fals
       return;
     }
 
+    deleteWorkspaceWithTasks(workspaceId);
+    setIsDeleting(null);
+  };
+
+  const deleteWorkspaceWithTasks = (workspaceId: string) => {
     // Get all tasks in this workspace
     const tasks = getTasksByWorkspace(workspaceId);
     
@@ -95,7 +104,67 @@ export function Sidebar({ collapsed = false, onToggleCollapse, mobileOpen = fals
 
     // Delete the workspace
     deleteWorkspace(workspaceId);
-    setIsDeleting(null);
+  };
+
+  const handleToggleSelection = (workspaceId: string) => {
+    setSelectedWorkspaceIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(workspaceId)) {
+        next.delete(workspaceId);
+      } else {
+        next.add(workspaceId);
+      }
+      return next;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedWorkspaceIds.size === workspaces.length) {
+      setSelectedWorkspaceIds(new Set());
+    } else {
+      setSelectedWorkspaceIds(new Set(workspaces.map((w) => w.id)));
+    }
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedWorkspaceIds.size === 0) return;
+
+    const count = selectedWorkspaceIds.size;
+    const confirmMessage = `Are you sure you want to delete ${count} workspace${count > 1 ? 's' : ''}? This will also delete all tasks and notes in ${count > 1 ? 'these workspaces' : 'this workspace'}.`;
+
+    if (!confirm(confirmMessage)) return;
+
+    const selectedIds = Array.from(selectedWorkspaceIds);
+    const activeId = activeWorkspaceId;
+
+    // Delete all selected workspaces
+    selectedIds.forEach((id) => {
+      deleteWorkspaceWithTasks(id);
+    });
+
+    // If active workspace was deleted, switch to another one
+    if (activeId && selectedIds.includes(activeId)) {
+      const remaining = workspaces.filter((w) => !selectedIds.includes(w.id));
+      if (remaining.length > 0) {
+        setActive(remaining[0].id);
+      } else {
+        setActive(null);
+      }
+    }
+
+    toast.success(
+      `Deleted ${count} workspace${count > 1 ? 's' : ''}`,
+      `All tasks and notes in ${count > 1 ? 'these workspaces' : 'this workspace'} have been removed`
+    );
+
+    // Exit selection mode
+    setIsSelectionMode(false);
+    setSelectedWorkspaceIds(new Set());
+  };
+
+  const handleExitSelectionMode = () => {
+    setIsSelectionMode(false);
+    setSelectedWorkspaceIds(new Set());
   };
 
   const sidebarContent = (
@@ -104,18 +173,71 @@ export function Sidebar({ collapsed = false, onToggleCollapse, mobileOpen = fals
         "flex h-16 items-center transition-all",
         collapsed ? "px-2 justify-center" : "px-4 justify-between"
       )}>
-        {!collapsed && <h2 className="font-semibold">Workspaces</h2>}
+        {!collapsed && (
+          <h2 className="font-semibold">
+            {isSelectionMode ? `Selected (${selectedWorkspaceIds.size})` : 'Workspaces'}
+          </h2>
+        )}
         <div className="flex items-center gap-1">
-          {!collapsed && (
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={handleCreateWorkspace}
-          title="Create workspace"
-          aria-label="Create new workspace"
-        >
-          <Plus className="h-4 w-4" />
-        </Button>
+          {!collapsed && !isSelectionMode && (
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsSelectionMode(true)}
+                title="Select workspaces"
+                aria-label="Select workspaces"
+              >
+                <CheckSquare className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleCreateWorkspace}
+                title="Create workspace"
+                aria-label="Create new workspace"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </>
+          )}
+          {!collapsed && isSelectionMode && (
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleSelectAll}
+                title={selectedWorkspaceIds.size === workspaces.length ? 'Deselect all' : 'Select all'}
+                aria-label={selectedWorkspaceIds.size === workspaces.length ? 'Deselect all' : 'Select all'}
+              >
+                {selectedWorkspaceIds.size === workspaces.length ? (
+                  <CheckSquare className="h-4 w-4" />
+                ) : (
+                  <Square className="h-4 w-4" />
+                )}
+              </Button>
+              {selectedWorkspaceIds.size > 0 && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleBulkDelete}
+                  title="Delete selected"
+                  aria-label="Delete selected workspaces"
+                  className="text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleExitSelectionMode}
+                title="Cancel selection"
+                aria-label="Cancel selection"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </>
           )}
           {onToggleCollapse && (
           <Button
@@ -147,42 +269,76 @@ export function Sidebar({ collapsed = false, onToggleCollapse, mobileOpen = fals
             </div>
           ) : (
             <div className="space-y-1">
-              {workspaces.map((workspace, index) => (
-                <div
+              {workspaces.map((workspace, index) => {
+                const isSelected = selectedWorkspaceIds.has(workspace.id);
+                return (
+                  <div
                   key={workspace.id}
                   className={cn(
                     'group flex items-center gap-2 rounded-md text-left text-sm transition-smooth animate-fade-in animate-slide-in-right',
                     collapsed ? 'px-2 py-2 justify-center' : 'px-3 py-2',
-                    activeWorkspaceId === workspace.id
+                    activeWorkspaceId === workspace.id && !isSelectionMode
                       ? 'bg-primary text-primary-foreground'
+                      : isSelected && isSelectionMode
+                      ? 'bg-primary/20 border border-primary'
                       : 'hover:bg-accent'
                   )}
                   style={{ animationDelay: `${index * 0.05}s` }}
+                  onClick={() => {
+                    if (isSelectionMode) {
+                      handleToggleSelection(workspace.id);
+                    } else if (!collapsed) {
+                      setActiveWorkspace(workspace.id);
+                      onMobileClose?.();
+                    }
+                  }}
                 >
                   {collapsed ? (
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <button
-                          onClick={() => {
-                            setActiveWorkspace(workspace.id);
-                            onMobileClose?.();
-                          }}
-                          className={cn(
-                            'w-full flex items-center justify-center rounded-md p-2 transition-colors',
-                            activeWorkspaceId === workspace.id
-                              ? 'bg-primary text-primary-foreground'
-                              : 'hover:bg-accent'
-                          )}
-                  aria-label={`Switch to ${workspace.name} workspace`}
-                  aria-pressed={activeWorkspaceId === workspace.id}
-                  role="tab"
-                >
-                          <div
-                            className="h-4 w-4 rounded-full"
-                            style={{ backgroundColor: workspace.color }}
+                    <>
+                      {isSelectionMode ? (
+                        <div className="w-full flex items-center justify-center">
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedWorkspaceIds((prev) => new Set([...prev, workspace.id]));
+                              } else {
+                                setSelectedWorkspaceIds((prev) => {
+                                  const next = new Set(prev);
+                                  next.delete(workspace.id);
+                                  return next;
+                                });
+                              }
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="flex-shrink-0"
                           />
-                        </button>
-                      </PopoverTrigger>
+                        </div>
+                      ) : (
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveWorkspace(workspace.id);
+                                onMobileClose?.();
+                              }}
+                              className={cn(
+                                'w-full flex items-center justify-center rounded-md p-2 transition-colors',
+                                activeWorkspaceId === workspace.id
+                                  ? 'bg-primary text-primary-foreground'
+                                  : 'hover:bg-accent'
+                              )}
+                              aria-label={`Switch to ${workspace.name} workspace`}
+                              aria-pressed={activeWorkspaceId === workspace.id}
+                              role="tab"
+                            >
+                              <div
+                                className="h-4 w-4 rounded-full"
+                                style={{ backgroundColor: workspace.color }}
+                              />
+                            </button>
+                          </PopoverTrigger>
                       <PopoverContent className="w-48 p-2" side="right">
                         <div className="space-y-1">
                           <div className="flex items-center gap-2 px-2 py-1.5">
@@ -220,79 +376,105 @@ export function Sidebar({ collapsed = false, onToggleCollapse, mobileOpen = fals
                         </div>
                       </PopoverContent>
                     </Popover>
+                      )}
+                    </>
                   ) : (
                     <>
                       <div className="flex-1 flex items-center gap-2 min-w-0">
-                        <Popover
-                          open={colorPickerOpen === workspace.id}
-                          onOpenChange={(open) => setColorPickerOpen(open ? workspace.id : null)}
-                        >
-                          <PopoverTrigger asChild>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setColorPickerOpen(workspace.id);
-                              }}
-                              className="h-3 w-3 rounded-full flex-shrink-0 border-2 border-transparent hover:border-foreground/20 transition-all hover:scale-125"
-                              style={{ backgroundColor: workspace.color }}
-                              title="Change color"
-                              aria-label="Change workspace color"
-                            />
-                          </PopoverTrigger>
-                          <PopoverContent className="w-64 p-3" align="start" onClick={(e) => e.stopPropagation()}>
-                            <div className="space-y-3">
-                              <div className="flex items-center gap-2">
-                                <Palette className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-sm font-medium">Choose Color</span>
-                              </div>
-                              <div className="flex flex-wrap gap-2">
-                                {colorPresets.map((presetColor) => (
-                                  <button
-                                    key={presetColor}
-                                    type="button"
-                                    onClick={() => handleColorChange(workspace.id, presetColor)}
-                                    className={cn(
-                                      'h-8 w-8 rounded-full border-2 transition-all hover:scale-110',
-                                      workspace.color === presetColor
-                                        ? 'border-foreground scale-110 ring-2 ring-offset-1 ring-offset-background ring-foreground'
-                                        : 'border-border'
-                                    )}
-                                    style={{ backgroundColor: presetColor }}
-                                    aria-label={`Select color ${presetColor}`}
+                        {isSelectionMode ? (
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={() => handleToggleSelection(workspace.id)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="flex-shrink-0"
+                          />
+                        ) : (
+                          <Popover
+                            open={colorPickerOpen === workspace.id}
+                            onOpenChange={(open) => setColorPickerOpen(open ? workspace.id : null)}
+                          >
+                            <PopoverTrigger asChild>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setColorPickerOpen(workspace.id);
+                                }}
+                                className="h-3 w-3 rounded-full flex-shrink-0 border-2 border-transparent hover:border-foreground/20 transition-all hover:scale-125"
+                                style={{ backgroundColor: workspace.color }}
+                                title="Change color"
+                                aria-label="Change workspace color"
+                              />
+                            </PopoverTrigger>
+                            <PopoverContent className="w-64 p-3" align="start" onClick={(e) => e.stopPropagation()}>
+                              <div className="space-y-3">
+                                <div className="flex items-center gap-2">
+                                  <Palette className="h-4 w-4 text-muted-foreground" />
+                                  <span className="text-sm font-medium">Choose Color</span>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                  {colorPresets.map((presetColor) => (
+                                    <button
+                                      key={presetColor}
+                                      type="button"
+                                      onClick={() => handleColorChange(workspace.id, presetColor)}
+                                      className={cn(
+                                        'h-8 w-8 rounded-full border-2 transition-all hover:scale-110',
+                                        workspace.color === presetColor
+                                          ? 'border-foreground scale-110 ring-2 ring-offset-1 ring-offset-background ring-foreground'
+                                          : 'border-border'
+                                      )}
+                                      style={{ backgroundColor: presetColor }}
+                                      aria-label={`Select color ${presetColor}`}
+                                    />
+                                  ))}
+                                </div>
+                                <div className="flex items-center gap-2 pt-2 border-t">
+                                  <span className="text-xs text-muted-foreground">Custom:</span>
+                                  <input
+                                    type="color"
+                                    value={workspace.color}
+                                    onChange={(e) => handleColorChange(workspace.id, e.target.value)}
+                                    className="h-8 w-16 cursor-pointer rounded border"
                                   />
-                                ))}
+                                  <div
+                                    className="h-8 w-16 rounded border"
+                                    style={{ backgroundColor: workspace.color }}
+                                  />
+                                </div>
                               </div>
-                              <div className="flex items-center gap-2 pt-2 border-t">
-                                <span className="text-xs text-muted-foreground">Custom:</span>
-                                <input
-                                  type="color"
-                                  value={workspace.color}
-                                  onChange={(e) => handleColorChange(workspace.id, e.target.value)}
-                                  className="h-8 w-16 cursor-pointer rounded border"
-                                />
-                                <div
-                                  className="h-8 w-16 rounded border"
-                                  style={{ backgroundColor: workspace.color }}
-                                />
-                              </div>
-                            </div>
-                          </PopoverContent>
-                        </Popover>
-                        <button
-                          onClick={() => {
-                            setActiveWorkspace(workspace.id);
-                            onMobileClose?.();
-                          }}
-                          className="flex-1 flex items-center gap-2 min-w-0 text-left"
-                          aria-label={`Switch to ${workspace.name} workspace`}
-                          aria-pressed={activeWorkspaceId === workspace.id}
-                          role="tab"
-                        >
-                          <Folder className="h-4 w-4 flex-shrink-0" />
-                  <span className="flex-1 truncate">{workspace.name}</span>
-                </button>
+                            </PopoverContent>
+                          </Popover>
+                        )}
+                        {isSelectionMode ? (
+                          <div
+                            className="flex-1 flex items-center gap-2 min-w-0 text-left cursor-pointer"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleSelection(workspace.id);
+                            }}
+                          >
+                            <Folder className="h-4 w-4 flex-shrink-0" />
+                            <span className="flex-1 truncate">{workspace.name}</span>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveWorkspace(workspace.id);
+                              onMobileClose?.();
+                            }}
+                            className="flex-1 flex items-center gap-2 min-w-0 text-left"
+                            aria-label={`Switch to ${workspace.name} workspace`}
+                            aria-pressed={activeWorkspaceId === workspace.id}
+                            role="tab"
+                          >
+                            <Folder className="h-4 w-4 flex-shrink-0" />
+                            <span className="flex-1 truncate">{workspace.name}</span>
+                          </button>
+                        )}
                       </div>
+                      {!isSelectionMode && (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button
@@ -337,10 +519,12 @@ export function Sidebar({ collapsed = false, onToggleCollapse, mobileOpen = fals
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
+                      )}
                     </>
                   )}
-                </div>
-              ))}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -360,6 +544,8 @@ export function Sidebar({ collapsed = false, onToggleCollapse, mobileOpen = fals
     return (
       <Sheet open={mobileOpen} onOpenChange={(open) => !open && onMobileClose()}>
         <SheetContent side="left" className="w-[280px] p-0" showCloseButton={false}>
+          <SheetTitle className="sr-only">Workspace Navigation</SheetTitle>
+          <SheetDescription className="sr-only">Navigate and manage your workspaces</SheetDescription>
           <aside 
             className="flex border-r bg-muted/40 flex-col h-full"
             aria-label="Workspace navigation"
