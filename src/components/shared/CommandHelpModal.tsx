@@ -8,7 +8,9 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Calendar, Tag, Flag, Clock, RefreshCw, FileText, Code, BookOpen } from 'lucide-react';
+import { Calendar, Tag, Flag, Clock, RefreshCw, FileText, Code, BookOpen, Copy } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { toast } from '@/lib/toast';
 
 interface CommandHelpModalProps {
   open: boolean;
@@ -16,6 +18,425 @@ interface CommandHelpModalProps {
 }
 
 export function CommandHelpModal({ open, onOpenChange }: CommandHelpModalProps) {
+  const generateMarkdownDocs = (): string => {
+    return `# Command Palette - Complete Master Guide
+
+This comprehensive guide will teach you everything you need to know about using the Command Palette to create tasks and notes efficiently.
+
+## Table of Contents
+
+1. [Basic Commands](#basic-commands)
+2. [Command Options](#command-options)
+3. [Date Formats](#date-formats)
+4. [Recurrence Patterns](#recurrence-patterns)
+5. [Examples](#examples)
+6. [Tips & Best Practices](#tips--best-practices)
+
+---
+
+## Basic Commands
+
+### Creating Tasks
+
+The simplest way to create a task:
+
+\`\`\`
+task "Task Title"
+\`\`\`
+
+This creates a task with default settings (status: todo, priority: none).
+
+### Creating Tasks with Options
+
+You can add options directly in the command:
+
+\`\`\`
+task "Title" status:in-progress priority:high
+\`\`\`
+
+### Creating Notes
+
+To create a standalone note:
+
+\`\`\`
+note "Title" "Content here"
+\`\`\`
+
+The note title and content should both be in quotes.
+
+### Multi-line Execution
+
+You can execute multiple commands at once by pasting them into Command Mode and pressing **Ctrl+Enter** (or Cmd+Enter on Mac):
+
+\`\`\`
+task "Task 1" priority:high
+task "Task 2" status:in-progress
+note "Note 1" "Content here"
+\`\`\`
+
+### Comments
+
+Lines starting with \`#\` are ignored and can be used for organization:
+
+\`\`\`
+# This is a comment
+task "Real task" priority:high
+# Another comment
+\`\`\`
+
+---
+
+## Command Options
+
+### Status & Priority
+
+#### Status (Required for tasks)
+
+The \`status\` option sets the task status. Available values:
+
+- \`todo\` - Task is not started
+- \`in-progress\` - Task is currently being worked on
+- \`blocked\` - Task is blocked by something
+- \`done\` - Task is completed
+- \`archived\` - Task is archived
+
+**Example:**
+\`\`\`
+task "My Task" status:in-progress
+\`\`\`
+
+#### Priority (Optional)
+
+The \`priority\` option sets the task priority level. Available values:
+
+- \`none\` - No priority (default)
+- \`low\` - Low priority
+- \`medium\` - Medium priority
+- \`high\` - High priority
+- \`urgent\` - Urgent priority
+
+**Example:**
+\`\`\`
+task "My Task" priority:high
+\`\`\`
+
+### Tags & Labels
+
+#### Tags (Optional)
+
+Tags are comma-separated and help categorize tasks:
+
+\`\`\`
+task "My Task" tags:work,urgent,meeting
+\`\`\`
+
+#### Labels (Optional)
+
+Labels are also comma-separated and provide additional categorization:
+
+\`\`\`
+task "My Task" labels:frontend,bug
+\`\`\`
+
+### Content
+
+#### Description (Optional)
+
+Add a detailed description to your task. Use quotes if the description contains spaces:
+
+\`\`\`
+task "My Task" description:"This is a detailed description with multiple words"
+\`\`\`
+
+### Time Tracking
+
+#### Progress (Optional)
+
+Track progress as a percentage (0-100):
+
+\`\`\`
+task "My Task" progress:50
+\`\`\`
+
+#### Estimated Time (Optional)
+
+Set estimated time in minutes:
+
+\`\`\`
+task "My Task" estimated:120
+\`\`\`
+
+#### Actual Time (Optional)
+
+Record actual time spent in minutes:
+
+\`\`\`
+task "My Task" actual:90
+\`\`\`
+
+---
+
+## Date Formats
+
+All date options support multiple formats:
+
+### Due Date
+
+Set when a task is due:
+
+\`\`\`
+task "My Task" due:2024-12-31
+task "My Task" due:2024-12-31 14:30
+task "My Task" due:2024-12-31T14:30
+\`\`\`
+
+### Start Date
+
+Set when a task should start:
+
+\`\`\`
+task "My Task" start:2024-12-01
+task "My Task" start:2024-12-01 09:00
+\`\`\`
+
+### Reminder
+
+Set a reminder date and time:
+
+\`\`\`
+task "My Task" reminder:2024-12-30
+task "My Task" reminder:2024-12-30 09:00
+\`\`\`
+
+### Supported Date Formats
+
+1. **YYYY-MM-DD** - Date only (time defaults to 00:00)
+   - Example: \`2024-12-31\`
+
+2. **YYYY-MM-DD HH:mm** - Date and time (24-hour format)
+   - Example: \`2024-12-31 14:30\`
+
+3. **YYYY-MM-DDTHH:mm** - ISO format (same as above)
+   - Example: \`2024-12-31T14:30\`
+
+---
+
+## Recurrence Patterns
+
+Create recurring tasks using the \`recurrence\` option.
+
+### Format
+
+\`\`\`
+pattern:interval[:endDate]
+\`\`\`
+
+or
+
+\`\`\`
+pattern:interval:daysOfWeek
+\`\`\`
+
+### Available Patterns
+
+- \`daily\` - Daily recurrence
+- \`weekly\` - Weekly recurrence
+- \`monthly\` - Monthly recurrence
+- \`yearly\` - Yearly recurrence
+- \`custom\` - Custom recurrence pattern
+
+### Examples
+
+#### Every Day
+
+\`\`\`
+task "Daily standup" recurrence:daily:1
+\`\`\`
+
+#### Every 2 Weeks
+
+\`\`\`
+task "Weekly review" recurrence:weekly:2
+\`\`\`
+
+#### Every Week on Specific Days
+
+\`\`\`
+task "Team meeting" recurrence:weekly:1:1,3,5
+\`\`\`
+
+Days of week: 0=Sunday, 1=Monday, 2=Tuesday, 3=Wednesday, 4=Thursday, 5=Friday, 6=Saturday
+
+#### Every Month on the 15th
+
+\`\`\`
+task "Monthly report" recurrence:monthly:1:15
+\`\`\`
+
+#### Every Year Until a Date
+
+\`\`\`
+task "Annual review" recurrence:yearly:1:2025-12-31
+\`\`\`
+
+---
+
+## Examples
+
+### Simple Tasks
+
+\`\`\`
+task "Review pull request"
+task "Buy groceries"
+task "Call dentist"
+\`\`\`
+
+### Tasks with Attributes
+
+\`\`\`
+task "Fix bug in login" status:in-progress priority:high tags:bug,urgent
+task "Plan team meeting" priority:medium tags:meeting due:2024-12-20
+task "Write documentation" status:todo priority:low tags:docs estimated:180
+\`\`\`
+
+### Tasks with Dates
+
+\`\`\`
+task "Submit report" due:2024-12-31
+task "Project kickoff" start:2024-12-01 due:2024-12-15
+task "Follow up email" reminder:2024-12-10 09:00
+\`\`\`
+
+### Recurring Tasks
+
+\`\`\`
+task "Daily standup" recurrence:daily:1
+task "Weekly review" recurrence:weekly:1:1 tags:meeting
+task "Monthly report" recurrence:monthly:1:1 due:2024-12-31
+\`\`\`
+
+### Notes
+
+\`\`\`
+note "Meeting Notes" "Discussed project timeline and resource allocation"
+note "Ideas" "Brainstorming session ideas for the next sprint"
+note "Quick Reference" "API endpoint: /api/v1/tasks, Auth: Bearer token"
+\`\`\`
+
+### Complex Example
+
+A task with multiple attributes:
+
+\`\`\`
+task "Complex Task" status:in-progress priority:urgent tags:work,bug,frontend labels:critical due:2024-12-31 start:2024-12-01 description:"This is a complex task with many attributes" progress:25 estimated:480
+\`\`\`
+
+### Bulk Import
+
+Import an entire project with comments for organization:
+
+\`\`\`
+# Project: Website Redesign
+task "Design mockups" status:todo priority:high tags:design,project
+task "Set up development environment" status:todo priority:medium tags:dev,setup
+task "Create component library" status:todo priority:high tags:dev,components
+task "Write API documentation" status:todo priority:low tags:docs
+note "Project Brief" "Redesign the company website with modern UI/UX principles"
+\`\`\`
+
+---
+
+## Tips & Best Practices
+
+### 1. Use Comments for Organization
+
+Comments help organize bulk imports:
+
+\`\`\`
+# Sprint Planning - Week 1
+task "Task 1" priority:high
+task "Task 2" priority:medium
+
+# Sprint Planning - Week 2
+task "Task 3" priority:high
+\`\`\`
+
+### 2. Combine Multiple Options
+
+You can combine any options in a single command:
+
+\`\`\`
+task "My Task" status:in-progress priority:high tags:work,urgent due:2024-12-31 description:"Important task"
+\`\`\`
+
+### 3. Use Quotes for Multi-word Values
+
+Always use quotes for:
+- Task titles with spaces
+- Note titles and content
+- Descriptions with spaces
+
+### 4. Bulk Operations
+
+The Command Palette excels at bulk operations. Paste a list of tasks and execute them all at once with **Ctrl+Enter**.
+
+### 5. Keyboard Shortcuts
+
+- **Ctrl+K** or **Ctrl+/** - Open Command Palette
+- **Ctrl+N** - Create new task
+- **Ctrl+F** - Focus search
+- **Ctrl+Enter** - Execute commands in Command Mode
+
+---
+
+## Quick Reference
+
+### Task Command Structure
+
+\`\`\`
+task "Title" [status:value] [priority:value] [tags:tag1,tag2] [labels:label1,label2] [due:date] [start:date] [reminder:date] [description:"text"] [progress:0-100] [estimated:minutes] [actual:minutes] [recurrence:pattern:interval]
+\`\`\`
+
+### Note Command Structure
+
+\`\`\`
+note "Title" "Content"
+\`\`\`
+
+### All Available Options
+
+| Option | Type | Required | Values |
+|--------|------|----------|--------|
+| status | string | Yes | todo, in-progress, blocked, done, archived |
+| priority | string | No | none, low, medium, high, urgent |
+| tags | string | No | Comma-separated list |
+| labels | string | No | Comma-separated list |
+| due | date | No | YYYY-MM-DD or YYYY-MM-DD HH:mm |
+| start | date | No | YYYY-MM-DD or YYYY-MM-DD HH:mm |
+| reminder | date | No | YYYY-MM-DD or YYYY-MM-DD HH:mm |
+| description | string | No | Text (use quotes for spaces) |
+| progress | number | No | 0-100 |
+| estimated | number | No | Minutes |
+| actual | number | No | Minutes |
+| recurrence | string | No | pattern:interval[:options] |
+
+---
+
+**Master this guide and you'll be able to create and manage tasks and notes with incredible speed and efficiency!** 🚀
+`;
+  };
+
+  const handleCopyMarkdown = async () => {
+    try {
+      const markdown = generateMarkdownDocs();
+      await navigator.clipboard.writeText(markdown);
+      toast.success('Documentation copied!', 'All command palette documentation has been copied to your clipboard as markdown.');
+    } catch (error) {
+      console.error('Failed to copy markdown:', error);
+      toast.error('Failed to copy', 'Could not copy documentation to clipboard. Please try again.');
+    }
+  };
+
   return (
     <>
       <style>{`
@@ -35,16 +456,28 @@ export function CommandHelpModal({ open, onOpenChange }: CommandHelpModalProps) 
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="!max-w-[95vw] !w-[95vw] max-h-[95vh] h-[95vh] flex flex-col p-0 gap-0 overflow-hidden">
         <DialogHeader className="px-6 pt-6 pb-4 border-b flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <BookOpen className="h-5 w-5 text-primary" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <BookOpen className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <DialogTitle className="text-2xl">Command Palette Guide</DialogTitle>
+                <DialogDescription className="mt-1">
+                  Learn how to create tasks and notes using simple commands
+                </DialogDescription>
+              </div>
             </div>
-            <div>
-              <DialogTitle className="text-2xl">Command Palette Guide</DialogTitle>
-              <DialogDescription className="mt-1">
-                Learn how to create tasks and notes using simple commands
-              </DialogDescription>
-            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCopyMarkdown}
+              className="flex items-center gap-2"
+            >
+              <Copy className="h-4 w-4" />
+              <span className="hidden sm:inline">Copy as Markdown</span>
+              <span className="sm:hidden">Copy</span>
+            </Button>
           </div>
         </DialogHeader>
 

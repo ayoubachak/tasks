@@ -25,10 +25,14 @@ import { exportTasksToMarkdown, downloadMarkdown } from '@/lib/export/markdown';
 
 interface ExportDialogProps {
   trigger?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function ExportDialog({ trigger }: ExportDialogProps) {
-  const [open, setOpen] = useState(false);
+export function ExportDialog({ trigger, open: controlledOpen, onOpenChange: controlledOnOpenChange }: ExportDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = controlledOnOpenChange || setInternalOpen;
   const [format, setFormat] = useState<'json' | 'csv' | 'markdown'>('json');
   const [exporting, setExporting] = useState(false);
 

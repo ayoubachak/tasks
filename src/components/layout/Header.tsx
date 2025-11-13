@@ -1,13 +1,7 @@
-import { ExportDialog } from '@/components/import-export/ExportDialog';
-import { ImportDialog } from '@/components/import-export/ImportDialog';
-import { BackupManager } from '@/components/import-export/BackupManager';
-import { GoogleSyncButton } from '@/components/sync/GoogleSyncButton';
+import { DataMenu } from '@/components/import-export/DataMenu';
 import { SyncButton } from '@/components/sync/SyncButton';
-import { PullButton } from '@/components/sync/PullButton';
-import { SyncStatus } from '@/components/sync/SyncStatus';
 import { Settings } from '@/components/settings/Settings';
 import { AppLogo } from '@/components/shared/AppLogo';
-import { useSyncStore } from '@/stores/syncStore';
 import { Button } from '@/components/ui/button';
 import { Menu } from 'lucide-react';
 import {
@@ -23,7 +17,6 @@ interface HeaderProps {
 }
 
 export function Header({ onMobileMenuToggle }: HeaderProps) {
-  const { isConnected } = useSyncStore();
 
   return (
     <header className="border-b bg-background sticky top-0 z-40" role="banner">
@@ -46,17 +39,8 @@ export function Header({ onMobileMenuToggle }: HeaderProps) {
         
         {/* Desktop actions */}
         <div className="hidden md:flex items-center gap-2">
-          {isConnected && (
-            <>
-              <SyncStatus />
-              <PullButton />
-              <SyncButton />
-            </>
-          )}
-          <GoogleSyncButton />
-          <ExportDialog />
-          <ImportDialog />
-          <BackupManager />
+          <SyncButton />
+          <DataMenu />
           <Settings />
         </div>
 
@@ -69,45 +53,15 @@ export function Header({ onMobileMenuToggle }: HeaderProps) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
-            {isConnected && (
-              <>
-                <DropdownMenuItem asChild>
-                  <div className="flex items-center justify-between w-full">
-                    <SyncStatus />
-                  </div>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <div className="w-full">
-                    <PullButton />
-                  </div>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <div className="w-full">
-                    <SyncButton />
-                  </div>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-              </>
-            )}
             <DropdownMenuItem asChild>
               <div className="w-full">
-                <GoogleSyncButton />
+                <SyncButton />
               </div>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
               <div className="w-full">
-                <ExportDialog />
-              </div>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <div className="w-full">
-                <ImportDialog />
-              </div>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <div className="w-full">
-                <BackupManager />
+                <DataMenu />
               </div>
             </DropdownMenuItem>
             <DropdownMenuSeparator />

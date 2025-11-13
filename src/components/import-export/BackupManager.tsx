@@ -35,10 +35,14 @@ import { collectAllData } from '@/lib/export/dataCollector';
 
 interface BackupManagerProps {
   trigger?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function BackupManager({ trigger }: BackupManagerProps) {
-  const [open, setOpen] = useState(false);
+export function BackupManager({ trigger, open: controlledOpen, onOpenChange: controlledOnOpenChange }: BackupManagerProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = controlledOnOpenChange || setInternalOpen;
   const [isCreating, setIsCreating] = useState(false);
   const [backupName, setBackupName] = useState('');
   const [backupDescription, setBackupDescription] = useState('');

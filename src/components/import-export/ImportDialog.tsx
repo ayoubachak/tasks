@@ -17,10 +17,14 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface ImportDialogProps {
   trigger?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function ImportDialog({ trigger }: ImportDialogProps) {
-  const [open, setOpen] = useState(false);
+export function ImportDialog({ trigger, open: controlledOpen, onOpenChange: controlledOnOpenChange }: ImportDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = controlledOnOpenChange || setInternalOpen;
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
