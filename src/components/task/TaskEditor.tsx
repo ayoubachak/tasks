@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useTaskStore, useUIStore } from '@/stores';
+import { useTaskStore, useUIStore, useTemplateStore } from '@/stores';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -27,8 +27,10 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { formatTime, parseTime, formatTimeForInput } from '@/lib/utils/timeFormat';
 import { toast } from '@/lib/toast';
-import { nanoid } from 'nanoid';
-import type { TaskStatus, Priority, RecurrenceRule, Subtask, Checklist, ChecklistItem, Note } from '@/types';
+import { TemplatePicker } from '@/components/templates/TemplatePicker';
+import { TemplateEditor } from '@/components/templates/TemplateEditor';
+import type { TaskStatus, Priority, RecurrenceRule } from '@/types';
+import type { TaskTemplate, NoteTemplate } from '@/types/template';
 
 interface TaskEditorProps {
   taskId: string | null;
@@ -46,6 +48,7 @@ export function TaskEditor({ taskId, workspaceId, onClose }: TaskEditorProps) {
     deleteNote
   } = useTaskStore();
   const { openDescriptionEditor, openNoteEditor } = useUIStore();
+  const { createTaskFromTemplate } = useTemplateStore();
   const task = taskId ? getTask(taskId) : null;
   
   // Get all tags from tasks in this workspace for autocomplete
@@ -55,7 +58,6 @@ export function TaskEditor({ taskId, workspaceId, onClose }: TaskEditorProps) {
   ).sort();
 
   const [draftTaskId, setDraftTaskId] = useState<string | null>(null);
-  const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
   const draftCreatedRef = useRef(false);
   const isSavingRef = useRef(false);
   const savedTaskIdRef = useRef<string | null>(null);
@@ -74,6 +76,56 @@ export function TaskEditor({ taskId, workspaceId, onClose }: TaskEditorProps) {
 
   // Get the current task (either existing or draft)
   const currentTask = task || (draftTaskId ? getTask(draftTaskId) : null);
+
+  const handleApplyTaskTemplate = (template: TaskTemplate | NoteTemplate) => {
+    if (!('taskStructure' in template)) return;
+
+    const applied = createTaskFromTemplate(template.id, workspaceId);
+    if (!applied) {
+      toast.error('Unable to apply template');
+      return;
+    }
+
+    const nextTitle = applied.title ?? template.name ?? 'Untitled';
+    const nextDescription = applied.description ?? '';
+    const nextStatus = (applied.status ?? 'todo') as TaskStatus;
+    const nextPriority = (applied.priority ?? 'none') as Priority;
+    const nextTags = applied.tags ?? [];
+
+    const templateDueDate = typeof applied.dueDate === 'number' ? new Date(applied.dueDate) : undefined;
+    const templateStartDate = typeof applied.startDate === 'number' ? new Date(applied.startDate) : undefined;
+    const templateReminderDate = typeof applied.reminderDate === 'number' ? new Date(applied.reminderDate) : undefined;
+
+    setTitle(nextTitle);
+    setDescription(nextDescription);
+    setStatus(nextStatus);
+    setPriority(nextPriority);
+    setTaskTags(nextTags);
+    setDueDate(templateDueDate);
+    setStartDate(templateStartDate);
+    setReminderDate(templateReminderDate);
+    setEstimatedTime(applied.estimatedTime ? formatTimeForInput(applied.estimatedTime) : '');
+    setActualTime(applied.actualTime ? formatTimeForInput(applied.actualTime) : '');
+    setRecurrence(applied.recurrence);
+
+    if (currentTask) {
+      updateTask(currentTask.id, {
+        title: nextTitle,
+        description: nextDescription,
+        status: nextStatus,
+        priority: nextPriority,
+        tags: nextTags,
+        dueDate: templateDueDate?.getTime(),
+        startDate: templateStartDate?.getTime(),
+        reminderDate: templateReminderDate?.getTime(),
+        estimatedTime: applied.estimatedTime,
+        actualTime: applied.actualTime,
+        recurrence: applied.recurrence,
+      });
+    }
+
+    toast.success('Template applied');
+  };
 
   // Create draft task immediately when opening for new task
   useEffect(() => {
@@ -237,13 +289,11 @@ export function TaskEditor({ taskId, workspaceId, onClose }: TaskEditorProps) {
     toast.success(taskId ? 'Task updated' : 'Task created', finalTitle);
     
     // Close the dialog by calling handleClose, which will see isSavingRef and skip deletion
-    handleClose(false);
+    handleClose();
   };
 
   // Handle closing - delete draft if empty (only when canceling, not saving)
-  const handleClose = (open?: boolean) => {
-    // If dialog is being opened, do nothing
-    if (open === true) return;
+  const handleClose = () => {
     
     // If we're saving, don't delete the task - just close
     // Also check if this is the task we just saved (even if isSavingRef was reset)
@@ -391,6 +441,29 @@ export function TaskEditor({ taskId, workspaceId, onClose }: TaskEditorProps) {
                       maxHeight: '6rem',
                       minHeight: '6rem'
                     } as React.CSSProperties}
+                  />
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <TemplatePicker
+                    type="task"
+                    onSelect={handleApplyTaskTemplate}
+                    trigger={
+                      <Button type="button" variant="outline" size="sm">
+                        <FileText className="mr-2 h-4 w-4" />
+                        Apply Template
+                      </Button>
+                    }
+                  />
+                  <TemplateEditor
+                    type="task"
+                    task={currentTask}
+                    trigger={
+                      <Button type="button" variant="outline" size="sm">
+                        <Plus className="mr-2 h-4 w-4" />
+                        Save as Template
+                      </Button>
+                    }
                   />
                 </div>
               </div>

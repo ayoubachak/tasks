@@ -7,7 +7,6 @@ import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Folder } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { NoteFolder } from '@/types';
 
 interface FolderEditorProps {
   folderId: string | null;

@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useSyncStore } from '@/stores/syncStore';
 import { format } from 'date-fns';
 import { Cloud, CheckCircle2, XCircle, Loader2, FolderOpen } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { getFolderUrl } from '@/services/google/drive';
 import { Button } from '@/components/ui/button';
 

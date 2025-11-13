@@ -1,3 +1,5 @@
+import type { Checklist } from './checklist';
+
 export type TaskStatus = 'todo' | 'in-progress' | 'blocked' | 'done' | 'archived';
 export type Priority = 'none' | 'low' | 'medium' | 'high' | 'urgent';
 
@@ -54,6 +56,7 @@ export interface Note {
   pinned: boolean;
   tags: string[];
 }
+
 
 export interface RecurrenceRule {
   pattern: 'daily' | 'weekly' | 'monthly' | 'yearly' | 'custom';

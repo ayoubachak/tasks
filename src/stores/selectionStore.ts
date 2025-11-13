@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import type { Task } from '@/types';
 
 interface SelectionState {
   selectedTaskIds: Set<string>;

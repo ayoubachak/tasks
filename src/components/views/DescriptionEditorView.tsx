@@ -4,7 +4,7 @@ import { MarkdownEditor } from '@/components/notes/MarkdownEditor';
 import { MarkdownViewer } from '@/components/notes/MarkdownViewer';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Save, X } from 'lucide-react';
 
 export function DescriptionEditorView() {

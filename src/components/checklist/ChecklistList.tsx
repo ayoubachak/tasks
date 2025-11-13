@@ -31,6 +31,8 @@ export function ChecklistList({ taskId, checklists }: ChecklistListProps) {
   const [newItemText, setNewItemText] = useState('');
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editingItemText, setEditingItemText] = useState('');
+  const [editingChecklistId, setEditingChecklistId] = useState<string | null>(null);
+  const [editingChecklistTitle, setEditingChecklistTitle] = useState('');
 
   const handleAddChecklist = () => {
     if (newChecklistTitle.trim()) {
@@ -128,8 +130,61 @@ export function ChecklistList({ taskId, checklists }: ChecklistListProps) {
         return (
           <div key={checklist.id} className="border rounded-lg p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 flex-1">
-                <h4 className="font-medium text-sm">{checklist.title}</h4>
+              <div className="flex items-center gap-2 flex-1 group">
+                {editingChecklistId === checklist.id ? (
+                  <div className="flex items-center gap-1 flex-1">
+                    <Input
+                      value={editingChecklistTitle}
+                      onChange={(e) => setEditingChecklistTitle(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          updateChecklist(taskId, checklist.id, { title: editingChecklistTitle.trim() || checklist.title });
+                          setEditingChecklistId(null);
+                          setEditingChecklistTitle('');
+                        } else if (e.key === 'Escape') {
+                          setEditingChecklistId(null);
+                          setEditingChecklistTitle('');
+                        }
+                      }}
+                      onBlur={() => {
+                        updateChecklist(taskId, checklist.id, { title: editingChecklistTitle.trim() || checklist.title });
+                        setEditingChecklistId(null);
+                        setEditingChecklistTitle('');
+                      }}
+                      className="h-7 text-sm flex-1"
+                      autoFocus
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => {
+                        setEditingChecklistId(null);
+                        setEditingChecklistTitle('');
+                      }}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    <h4 className="font-medium text-sm">{checklist.title}</h4>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => {
+                        setEditingChecklistId(checklist.id);
+                        setEditingChecklistTitle(checklist.title);
+                      }}
+                      title="Rename checklist"
+                    >
+                      <Edit2 className="h-3 w-3" />
+                    </Button>
+                  </>
+                )}
                 <Badge variant="outline" className="text-xs">
                   {completedCount}/{checklist.items.length}
                 </Badge>

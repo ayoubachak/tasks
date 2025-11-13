@@ -5,8 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { MarkdownViewer } from './MarkdownViewer';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { format } from 'date-fns';
-import { History, RotateCcw, X } from 'lucide-react';
-import type { Note } from '@/types';
+import { History, RotateCcw } from 'lucide-react';
 
 interface NoteHistoryProps {
   taskId: string;

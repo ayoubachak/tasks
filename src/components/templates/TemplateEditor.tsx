@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { FileText, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useTemplateStore } from '@/stores';
 import { useWorkspaceStore } from '@/stores';
 import type { Task } from '@/types';
@@ -42,9 +42,14 @@ export function TemplateEditor({ type, task, noteContent, trigger }: TemplateEdi
         status: task.status,
         priority: task.priority,
         tags: [...task.tags],
+        labels: [...task.labels],
         dueDate: task.dueDate,
+        startDate: task.startDate,
+        reminderDate: task.reminderDate,
+        estimatedTime: task.estimatedTime,
+        actualTime: task.actualTime,
         recurrence: task.recurrence,
-        // Don't include id, workspaceId, timestamps, etc.
+        // Intentionally omitting IDs, subtasks, checklists for simplicity.
       };
       createTaskTemplate(name, description, taskStructure, activeWorkspace?.id);
     } else if (type === 'note' && noteContent) {

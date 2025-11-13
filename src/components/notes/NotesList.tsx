@@ -5,12 +5,11 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { DescriptionPreview } from '@/components/task/DescriptionPreview';
-import { MarkdownViewer } from './MarkdownViewer';
 import { NoteHistory } from './NoteHistory';
 import { InlineNoteEditor } from './InlineNoteEditor';
 import { FolderTree } from './FolderTree';
 import { FolderEditor } from './FolderEditor';
-import { Plus, FileText, Pin, History, Search, X, Trash2, Folder } from 'lucide-react';
+import { Plus, Pin, History, Search, X, Trash2, Folder } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { toast } from '@/lib/toast';
@@ -25,7 +24,7 @@ interface NoteWithTask {
 
 export function NotesList() {
   const { getActiveWorkspace } = useWorkspaceStore();
-  const { getNotesByFolder, getTasksByWorkspace, deleteNote, moveNoteToFolder } = useTaskStore();
+  const { getNotesByFolder, getTasksByWorkspace, deleteNote } = useTaskStore();
   const { getFolder } = useNoteFolderStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFolderId, setSelectedFolderId] = useState<string | undefined>(undefined);

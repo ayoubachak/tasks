@@ -18,7 +18,7 @@ export function replaceDataUrisWithReferences(
   // Match markdown image syntax with data URIs
   const imageRegex = /!\[([^\]]*)\]\((data:[^)]+)\)/g;
   
-  return markdown.replace(imageRegex, (match, alt, dataUri) => {
+  return markdown.replace(imageRegex, (_match, alt, dataUri) => {
     // Store the image and get its ID
     const imageId = storeMedia({
       type: 'image',
@@ -62,13 +62,13 @@ export function replaceReferencesWithDataUris(
 ): string {
   const imageRegex = /!\[([^\]]*)\]\(((?:media|image):([^)]+))\)/g;
   
-  return markdown.replace(imageRegex, (match, alt, ref, id) => {
+  return markdown.replace(imageRegex, (_match, alt, _ref, id) => {
     const dataUri = getImageData(id);
     if (dataUri) {
       return `![${alt}](${dataUri})`;
     }
     // If image not found, keep the reference (or show broken image)
-    return match;
+    return _match;
   });
 }
 

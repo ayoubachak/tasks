@@ -35,7 +35,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
 }, ref) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lastSyncedValueRef = useRef<string>(value);
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const storeMedia = useMediaStore((state) => state.storeMedia);
   const [showAudioRecorder, setShowAudioRecorder] = useState(false);
   

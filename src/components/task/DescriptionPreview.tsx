@@ -1,7 +1,5 @@
 import { useMemo } from 'react';
 import { MarkdownViewer } from '@/components/notes/MarkdownViewer';
-import { Image as ImageIcon } from 'lucide-react';
-import { extractImageReferences } from '@/lib/markdown/imageReferences';
 
 interface DescriptionPreviewProps {
   content: string;
@@ -30,12 +28,12 @@ export function DescriptionPreview({
     let processed = content;
     
     // Replace image references with text placeholders
-    processed = processed.replace(imageRefRegex, (match, alt) => {
+    processed = processed.replace(imageRefRegex, (_match, alt) => {
       return `[📷 ${alt || 'Image'}]`;
     });
     
     // Replace data URI images with text placeholders
-    processed = processed.replace(dataUriRegex, (match, alt) => {
+    processed = processed.replace(dataUriRegex, (_match, alt) => {
       return `[📷 ${alt || 'Image'}]`;
     });
     

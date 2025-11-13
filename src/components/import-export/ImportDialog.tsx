@@ -10,8 +10,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Upload, FileJson, AlertCircle, CheckCircle } from 'lucide-react';
-import { importFromJSON, type ExportData } from '@/lib/export/json';
+import { Upload, AlertCircle, CheckCircle } from 'lucide-react';
+import { importFromJSON } from '@/lib/export/json';
 import { importFromJSONData, type ImportResult } from '@/lib/import/json';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 

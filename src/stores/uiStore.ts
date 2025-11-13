@@ -16,7 +16,7 @@ interface UIState {
   navigateToView: (view: ViewType, state?: EditorState) => void;
   navigateBack: () => void;
   openDescriptionEditor: (taskId: string, workspaceId: string) => void;
-  openNoteEditor: (taskId: string, noteId: string, workspaceId: string) => void;
+  openNoteEditor: (taskId: string, noteId: string | null, workspaceId: string) => void;
 }
 
 const viewHistory: Array<{ view: ViewType; state: EditorState | null }> = [];

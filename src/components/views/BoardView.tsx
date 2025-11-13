@@ -218,7 +218,7 @@ export function BoardView({ tasks, onEditTask }: BoardViewProps) {
   };
 
   const handleDragOver = (event: DragOverEvent) => {
-    const { active, over } = event;
+    const { over } = event;
     if (!over) return;
 
     // Visual feedback could be added here if needed

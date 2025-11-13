@@ -92,7 +92,7 @@ export function SortableListView({ tasks, onEditTask }: SortableListViewProps) {
       const reorderedTasks = arrayMove(tasks, oldIndex, newIndex);
       
       // Update order for all affected tasks
-      reorderedTasks.forEach((task, index) => {
+      reorderedTasks.forEach((task) => {
         // We'll use a simple order field - if tasks don't have it, we'll add it
         // For now, we'll update the updatedAt timestamp to reflect the change
         updateTask(task.id, { updatedAt: Date.now() });

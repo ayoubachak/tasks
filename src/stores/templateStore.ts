@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import { nanoid } from 'nanoid';
 import type { TaskTemplate, NoteTemplate } from '@/types/template';
 import type { Task, Note } from '@/types';
+import { useTaskStore } from './taskStore';
 
 interface TemplateState {
   taskTemplates: TaskTemplate[];
@@ -19,7 +20,7 @@ interface TemplateState {
   deleteTaskTemplate: (id: string) => void;
   getTaskTemplate: (id: string) => TaskTemplate | undefined;
   getTaskTemplatesByWorkspace: (workspaceId?: string) => TaskTemplate[];
-  createTaskFromTemplate: (templateId: string, workspaceId: string) => Task | null;
+  createTaskFromTemplate: (templateId: string, workspaceId: string) => Partial<Task> | null;
   
   // Note Template Actions
   createNoteTemplate: (
@@ -100,8 +101,13 @@ export const useTemplateStore = create<TemplateState>()(
           usageCount: template.usageCount + 1,
         });
 
-        // Return the task structure (will be used by taskStore to create the task)
-        return template.taskStructure as Task;
+        // Return the task structure (consumer is responsible for merging + generating new IDs)
+        return {
+          ...template.taskStructure,
+          workspaceId,
+          title: template.taskStructure.title ?? template.name,
+          description: template.taskStructure.description ?? '',
+        } as Partial<Task>;
       },
 
       createNoteTemplate: (name, description, content, workspaceId) => {
@@ -164,7 +170,6 @@ export const useTemplateStore = create<TemplateState>()(
         });
 
         // Get workspaceId from task
-        const { useTaskStore } = require('./taskStore');
         const taskStore = useTaskStore.getState();
         const task = taskStore.getTask(taskId);
         const workspaceId = task?.workspaceId;

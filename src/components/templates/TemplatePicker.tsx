@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -9,28 +9,26 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { FileText, Plus, Trash2 } from 'lucide-react';
-import { useTemplateStore } from '@/stores';
-import { useWorkspaceStore } from '@/stores';
+import { FileText, Trash2 } from 'lucide-react';
+import { useTemplateStore, useWorkspaceStore } from '@/stores';
 import type { TaskTemplate, NoteTemplate } from '@/types/template';
+import type { ReactNode } from 'react';
 
 interface TemplatePickerProps {
   type: 'task' | 'note';
   onSelect: (template: TaskTemplate | NoteTemplate) => void;
-  trigger?: React.ReactNode;
+  trigger?: ReactNode;
 }
 
 export function TemplatePicker({ type, onSelect, trigger }: TemplatePickerProps) {
   const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
   const { getActiveWorkspace } = useWorkspaceStore();
   const activeWorkspace = getActiveWorkspace();
   
   const {
-    taskTemplates,
-    noteTemplates,
     getTaskTemplatesByWorkspace,
     getNoteTemplatesByWorkspace,
     deleteTaskTemplate,
@@ -40,6 +38,15 @@ export function TemplatePicker({ type, onSelect, trigger }: TemplatePickerProps)
   const templates = type === 'task'
     ? getTaskTemplatesByWorkspace(activeWorkspace?.id)
     : getNoteTemplatesByWorkspace(activeWorkspace?.id);
+
+  const filteredTemplates = useMemo(() => {
+    if (!search.trim()) return templates;
+    const term = search.toLowerCase();
+    return templates.filter((template) => {
+      const haystack = `${template.name} ${template.description ?? ''}`.toLowerCase();
+      return haystack.includes(term);
+    });
+  }, [templates, search]);
 
   const handleSelect = (template: TaskTemplate | NoteTemplate) => {
     onSelect(template);
@@ -76,14 +83,20 @@ export function TemplatePicker({ type, onSelect, trigger }: TemplatePickerProps)
             Select a template to create a new {type === 'task' ? 'task' : 'note'}
           </DialogDescription>
         </DialogHeader>
-        <ScrollArea className="max-h-[400px]">
-          {templates.length === 0 ? (
+        <div className="space-y-3 pb-2">
+          <Input
+            placeholder="Search templates..."
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
+          <ScrollArea className="max-h-[360px] pr-2">
+            {filteredTemplates.length === 0 ? (
             <div className="py-8 text-center text-sm text-muted-foreground">
               No templates available. Create one to get started.
             </div>
-          ) : (
+            ) : (
             <div className="space-y-2">
-              {templates.map((template) => (
+                {filteredTemplates.map((template) => (
                 <div
                   key={template.id}
                   className="flex items-center justify-between rounded-lg border p-3 hover:bg-accent cursor-pointer transition-colors"
@@ -114,8 +127,9 @@ export function TemplatePicker({ type, onSelect, trigger }: TemplatePickerProps)
                 </div>
               ))}
             </div>
-          )}
-        </ScrollArea>
+            )}
+          </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );

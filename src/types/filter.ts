@@ -1,5 +1,3 @@
-import type { TaskStatus, Priority } from './task';
-
 export type ViewType = 'list' | 'board' | 'calendar' | 'analytics';
 
 export type SortField = 'created' | 'updated' | 'dueDate' | 'priority' | 'title' | 'status';

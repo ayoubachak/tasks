@@ -62,7 +62,7 @@ export function MarkdownViewer({ content, className }: MarkdownViewerProps) {
           src: dataUri,
           title: fallbackTitle,
           mimeType: asset?.mimeType,
-          poster: asset?.metadata?.poster,
+          poster: typeof asset?.metadata?.poster === 'string' ? asset.metadata.poster : undefined,
         });
         return `![${fallbackTitle}](${placeholder})`;
       }
@@ -110,13 +110,13 @@ export function MarkdownViewer({ content, className }: MarkdownViewerProps) {
   }, [usedMediaIds, updateLastUsed]);
 
   const components: Components = {
-    code({ node, inline, className: codeClassName, children, ...props }) {
+    code({ inline, className: codeClassName, children, ...props }: any) {
       const match = /language-(\w+)/.exec(codeClassName || '');
       const language = match ? match[1] : '';
       
       return !inline && match ? (
         <SyntaxHighlighter
-          style={oneDark}
+          style={oneDark as any}
           language={language}
           PreTag="div"
           {...props}

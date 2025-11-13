@@ -115,7 +115,7 @@ export async function authenticateWithPopup(): Promise<GoogleAuthTokens> {
     }
 
     let messageReceived = false;
-    let checkClosedInterval: NodeJS.Timeout | null = null;
+    let checkClosedInterval: ReturnType<typeof setInterval> | null = null;
 
     // Listen for messages from popup (when it redirects to callback)
     const messageListener = async (event: MessageEvent) => {

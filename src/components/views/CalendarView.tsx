@@ -5,7 +5,6 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { format } from 'date-fns';
 import type { Task } from '@/types';
-import { cn } from '@/lib/utils';
 
 interface CalendarViewProps {
   tasks: Task[];
@@ -34,11 +33,6 @@ export function CalendarView({ tasks, onEditTask }: CalendarViewProps) {
     const dateKey = format(selectedDate, 'yyyy-MM-dd');
     return tasksByDate[dateKey] || [];
   }, [selectedDate, tasksByDate]);
-
-  const getTasksForDate = (date: Date) => {
-    const dateKey = format(date, 'yyyy-MM-dd');
-    return tasksByDate[dateKey] || [];
-  };
 
   const daysWithTasks = useMemo(() => {
     const days: Date[] = [];

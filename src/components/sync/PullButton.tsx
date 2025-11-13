@@ -5,7 +5,6 @@ import { replaceAllDataWithBackup } from '@/lib/import/json';
 import { Button } from '@/components/ui/button';
 import { Download, Loader2 } from 'lucide-react';
 import { toast } from '@/lib/toast';
-import type { ExportData } from '@/lib/export/json';
 import { format } from 'date-fns';
 
 export function PullButton() {

@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { AppLayout } from './components/layout/AppLayout';
 import { TaskList } from './components/task/TaskList';
 import { NotesList } from './components/notes/NotesList';
@@ -11,7 +11,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
 import { Toaster } from './components/ui/toaster';
 import { storage } from './lib/storage/localStorage';
 import { useWorkspaceStore, useUIStore, useSyncStore } from './stores';
-import { exchangeCodeForTokens } from './services/google/auth';
 import { CheckSquare, StickyNote } from 'lucide-react';
 
 function App() {
@@ -19,8 +18,6 @@ function App() {
   const { currentView } = useUIStore();
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'tasks' | 'notes'>('tasks');
-  const searchInputRef = useRef<HTMLInputElement>(null);
-
   const { checkConnection, setConnected } = useSyncStore();
 
   useEffect(() => {

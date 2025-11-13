@@ -5,7 +5,6 @@ import { collectAllData } from '@/lib/export/dataCollector';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, Loader2 } from 'lucide-react';
 import { toast } from '@/lib/toast';
-import { cn } from '@/lib/utils';
 
 export function SyncButton() {
   const { 

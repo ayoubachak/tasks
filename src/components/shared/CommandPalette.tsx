@@ -12,7 +12,7 @@ import { useViewStore } from '@/stores/viewStore';
 import { useTaskStore, useWorkspaceStore } from '@/stores';
 import { useShortcutStore } from '@/stores/shortcutStore';
 import { getShortcutDisplay } from '@/constants/shortcuts';
-import { List, LayoutGrid, Calendar, Plus, Search, FileText, Settings, Trash2, Tag } from 'lucide-react';
+import { List, LayoutGrid, Calendar, Plus, FileText } from 'lucide-react';
 import type { ViewType } from '@/types/filter';
 
 interface CommandPaletteProps {

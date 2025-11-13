@@ -1,5 +1,5 @@
 import type { Task, TaskStatus, Priority } from '@/types';
-import { isAfter, isBefore, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, differenceInDays } from 'date-fns';
+import { startOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, differenceInDays } from 'date-fns';
 
 export interface TaskStats {
   totalTasks: number;
@@ -14,6 +14,9 @@ export interface TaskStats {
   tasksCreatedThisWeek: number;
   tasksCompletedThisWeek: number;
   tasksDueThisWeek: number;
+  tasksCreatedThisMonth: number;
+  tasksCompletedThisMonth: number;
+  tasksDueThisMonth: number;
   tasksByTag: Record<string, number>;
   streakDays: number;
   lastUpdated: number;
@@ -52,6 +55,9 @@ export function calculateTaskStats(tasks: Task[]): TaskStats {
     tasksCreatedThisWeek: 0,
     tasksCompletedThisWeek: 0,
     tasksDueThisWeek: 0,
+    tasksCreatedThisMonth: 0,
+    tasksCompletedThisMonth: 0,
+    tasksDueThisMonth: 0,
     tasksByTag: {},
     streakDays: 0,
     lastUpdated: now,
@@ -89,15 +95,24 @@ export function calculateTaskStats(tasks: Task[]): TaskStats {
     if (task.createdAt >= weekStart.getTime() && task.createdAt <= weekEnd.getTime()) {
       stats.tasksCreatedThisWeek++;
     }
+    if (task.createdAt >= monthStart.getTime() && task.createdAt <= monthEnd.getTime()) {
+      stats.tasksCreatedThisMonth++;
+    }
 
     // Tasks completed this week
     if (task.completedAt && task.completedAt >= weekStart.getTime() && task.completedAt <= weekEnd.getTime()) {
       stats.tasksCompletedThisWeek++;
     }
+    if (task.completedAt && task.completedAt >= monthStart.getTime() && task.completedAt <= monthEnd.getTime()) {
+      stats.tasksCompletedThisMonth++;
+    }
 
     // Tasks due this week
     if (task.dueDate && task.dueDate >= weekStart.getTime() && task.dueDate <= weekEnd.getTime()) {
       stats.tasksDueThisWeek++;
+    }
+    if (task.dueDate && task.dueDate >= monthStart.getTime() && task.dueDate <= monthEnd.getTime()) {
+      stats.tasksDueThisMonth++;
     }
 
     // Count by tags

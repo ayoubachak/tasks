@@ -26,7 +26,7 @@ interface SyncState {
 
 export const useSyncStore = create<SyncState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       isConnected: false,
       syncStatus: 'idle',
       lastSyncAt: null,

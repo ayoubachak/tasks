@@ -1,9 +1,7 @@
 import { useEffect } from 'react';
 import { useShortcutStore } from '@/stores/shortcutStore';
 import { useViewStore } from '@/stores/viewStore';
-import { useTaskStore, useWorkspaceStore } from '@/stores';
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut';
-import type { ViewType } from '@/types/filter';
 
 interface KeyboardShortcutsProps {
   onNewTask?: () => void;
@@ -17,8 +15,7 @@ export function KeyboardShortcuts({
   onFocusSearch,
 }: KeyboardShortcutsProps) {
   const { enabled } = useShortcutStore();
-  const { setView, setSearchQuery } = useViewStore();
-  const { getActiveWorkspace } = useWorkspaceStore();
+  const { setView } = useViewStore();
 
   // Command Palette (Cmd/Ctrl + K)
   useKeyboardShortcut(

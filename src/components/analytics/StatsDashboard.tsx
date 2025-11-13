@@ -81,6 +81,9 @@ export function StatsDashboard() {
         <p className="text-sm text-muted-foreground mt-1">
           Statistics for {activeWorkspace.name}
         </p>
+        <p className="text-xs text-muted-foreground mt-1">
+          Last updated {format(new Date(stats.lastUpdated), 'PPpp')}
+        </p>
       </div>
 
       {/* Overview Stats */}
@@ -234,6 +237,27 @@ export function StatsDashboard() {
         <StatCard
           title="Due This Week"
           value={stats.tasksDueThisWeek}
+          icon={Clock}
+          color="warning"
+        />
+      </div>
+
+      {/* Monthly Snapshot */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <StatCard
+          title="Created This Month"
+          value={stats.tasksCreatedThisMonth}
+          icon={Calendar}
+        />
+        <StatCard
+          title="Completed This Month"
+          value={stats.tasksCompletedThisMonth}
+          icon={CheckCircle2}
+          color="success"
+        />
+        <StatCard
+          title="Due This Month"
+          value={stats.tasksDueThisMonth}
           icon={Clock}
           color="warning"
         />

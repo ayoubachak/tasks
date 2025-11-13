@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Trash2, Palette } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { Workspace } from '@/types';
 
 interface WorkspaceEditorProps {
   workspaceId: string | null;

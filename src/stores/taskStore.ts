@@ -3,9 +3,9 @@ import { persist } from 'zustand/middleware';
 import { nanoid } from 'nanoid';
 import { buildSubtaskTree, calculateNestedProgress, getSubtaskDescendants } from '@/lib/subtasks/treeUtils';
 import { wouldCreateCycle } from '@/lib/dependencies/dependencyUtils';
-import { getNextOccurrence, shouldCreateRecurrence } from '@/lib/recurrence/recurrenceUtils';
+import { getNextOccurrence } from '@/lib/recurrence/recurrenceUtils';
 import { useNoteHistoryStore } from './noteHistoryStore';
-import type { Task, TaskStatus, Priority, Subtask, Note, ImageData, RecurrenceRule } from '@/types';
+import type { Task, TaskStatus, Subtask, Note, ImageData, RecurrenceRule, Checklist, ChecklistItem } from '@/types';
 
 interface TaskState {
   tasks: Task[];
@@ -130,8 +130,8 @@ export const useTaskStore = create<TaskState>()(
 
       deleteTask: (id: string) => {
         set((state) => {
-          // Find the task being deleted
-          const taskToDelete = state.tasks.find((task) => task.id === id);
+          // Find the task being deleted (for potential cleanup)
+          state.tasks.find((task) => task.id === id);
           
           // Notes that are linked to this task will be deleted with the task
           // (they're stored in task.notes, so they'll be removed when the task is removed)
@@ -373,7 +373,7 @@ export const useTaskStore = create<TaskState>()(
         return note;
       },
 
-      updateNote: (noteId: string, content: string, title?: string, taskId?: string, folderId?: string) => {
+      updateNote: (noteId: string, content: string, title?: string, _taskId?: string, folderId?: string) => {
         set((state) => {
           // Try to find note in tasks first
           let foundNote: Note | undefined;
@@ -830,7 +830,7 @@ export const useTaskStore = create<TaskState>()(
         }
 
         const lastOccurrence = task.completedAt || task.createdAt;
-        const nextOccurrence = getNextOccurrence(task.recurrence, lastOccurrence);
+        const nextOccurrence = getNextOccurrence(task.recurrence, lastOccurrence, task.createdAt);
         
         if (!nextOccurrence) {
           return null; // Recurrence ended
@@ -945,7 +945,7 @@ export const useTaskStore = create<TaskState>()(
         }
 
         const maxOrder = checklist.items.length > 0
-          ? Math.max(...checklist.items.map((i) => i.order))
+          ? Math.max(...checklist.items.map((i: ChecklistItem) => i.order))
           : -1;
 
         const item: ChecklistItem = {
@@ -989,7 +989,7 @@ export const useTaskStore = create<TaskState>()(
             if (task.id === taskId) {
               const checklists = task.checklists.map((c) => {
                 if (c.id === checklistId) {
-                  const items = c.items.map((i) =>
+                  const items = c.items.map((i: ChecklistItem) =>
                     i.id === itemId ? { ...i, ...updates } : i
                   );
                   return {
@@ -1019,7 +1019,7 @@ export const useTaskStore = create<TaskState>()(
                 if (c.id === checklistId) {
                   return {
                     ...c,
-                    items: c.items.filter((i) => i.id !== itemId),
+                    items: c.items.filter((i: ChecklistItem) => i.id !== itemId),
                     updatedAt: Date.now(),
                   };
                 }
@@ -1042,7 +1042,7 @@ export const useTaskStore = create<TaskState>()(
             if (task.id === taskId) {
               const checklists = task.checklists.map((c) => {
                 if (c.id === checklistId) {
-                  const items = c.items.map((i) => {
+                  const items = c.items.map((i: ChecklistItem) => {
                     if (i.id === itemId) {
                       return {
                         ...i,
@@ -1078,7 +1078,7 @@ export const useTaskStore = create<TaskState>()(
         const checklist = task.checklists.find((c) => c.id === checklistId);
         if (!checklist || checklist.items.length === 0) return 0;
 
-        const completedCount = checklist.items.filter((i) => i.completed).length;
+        const completedCount = checklist.items.filter((i: ChecklistItem) => i.completed).length;
         return Math.round((completedCount / checklist.items.length) * 100);
       },
     }),

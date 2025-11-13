@@ -53,10 +53,12 @@ function DialogContent({
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
 }) {
+  // DialogContent doesn't have open prop - it's controlled by Dialog Root
+  // We'll use a ref that works with HTMLDivElement
   const containerRef = useFocusManagement(
-    props.open ?? false,
+    true, // Assume open when rendered (Dialog controls visibility)
     { focusFirst: true, delay: 100 }
-  );
+  ) as React.RefObject<HTMLDivElement>;
 
   return (
     <DialogPortal data-slot="dialog-portal">

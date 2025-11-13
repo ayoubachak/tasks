@@ -72,7 +72,7 @@ export function getNextOccurrence(
  * Check if a task should be created based on recurrence
  */
 export function shouldCreateRecurrence(
-  rule: RecurrenceRule,
+  _rule: RecurrenceRule,
   lastCreated: number | undefined,
   dueDate: number | undefined
 ): boolean {

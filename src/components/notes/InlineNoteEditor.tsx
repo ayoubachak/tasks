@@ -1,13 +1,17 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useTaskStore, useWorkspaceStore } from '@/stores';
+import { useTaskStore, useWorkspaceStore, useTemplateStore } from '@/stores';
 import { MarkdownEditor, type MarkdownEditorRef } from '@/components/notes/MarkdownEditor';
 import { MarkdownViewer } from '@/components/notes/MarkdownViewer';
 import { NoteHistory } from '@/components/notes/NoteHistory';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Save, X, Pin, Trash2, History, ArrowLeft } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Save, Pin, Trash2, History, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { TemplatePicker } from '@/components/templates/TemplatePicker';
+import { TemplateEditor } from '@/components/templates/TemplateEditor';
+import { toast } from '@/lib/toast';
+import type { NoteTemplate, TaskTemplate } from '@/types/template';
 
 interface InlineNoteEditorProps {
   taskId?: string; // Optional - for standalone notes
@@ -20,6 +24,7 @@ interface InlineNoteEditorProps {
 export function InlineNoteEditor({ taskId, noteId, folderId, onClose, onSave }: InlineNoteEditorProps) {
   const { getTask, getNote, addNote, updateNote, deleteNote, pinNote } = useTaskStore();
   const { getActiveWorkspace } = useWorkspaceStore();
+  const { updateNoteTemplate } = useTemplateStore();
   
   // Memoize task and note lookups to prevent unnecessary re-renders
   const task = useMemo(() => taskId ? getTask(taskId) : null, [taskId, getTask]);
@@ -40,8 +45,26 @@ export function InlineNoteEditor({ taskId, noteId, folderId, onClose, onSave }: 
   const [isPreviewUpdating, setIsPreviewUpdating] = useState(false);
   const [viewMode, setViewMode] = useState<'edit' | 'preview' | 'split'>('edit');
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const editorRef = useRef<MarkdownEditorRef>(null);
+
+  const handleApplyNoteTemplate = useCallback((template: TaskTemplate | NoteTemplate) => {
+    if (!('content' in template)) {
+      return;
+    }
+
+    setNoteTitle(template.name || 'Untitled Note');
+    setContent(template.content);
+    setDebouncedContent(template.content);
+    editorRef.current?.setValue(template.content);
+
+    updateNoteTemplate(template.id, {
+      usageCount: template.usageCount + 1,
+      updatedAt: Date.now(),
+    });
+
+    toast.success('Template applied');
+  }, [updateNoteTemplate]);
 
   // Initialize note title and content when note changes
   useEffect(() => {
@@ -182,6 +205,19 @@ export function InlineNoteEditor({ taskId, noteId, folderId, onClose, onSave }: 
                 </Button>
               </>
             )}
+            <TemplatePicker
+              type="note"
+              onSelect={handleApplyNoteTemplate}
+            />
+            <TemplateEditor
+              type="note"
+              noteContent={editorRef.current?.getValue() ?? content}
+              trigger={
+                <Button variant="outline" size="sm" type="button">
+                  Save as Template
+                </Button>
+              }
+            />
             <Button variant="outline" size="sm" onClick={onClose} className="text-xs sm:text-sm">
               <ArrowLeft className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
               <span className="hidden sm:inline">Back</span>
@@ -289,7 +325,7 @@ export function InlineNoteEditor({ taskId, noteId, folderId, onClose, onSave }: 
           noteId={note.id}
           open={isHistoryOpen}
           onClose={() => setIsHistoryOpen(false)}
-          onRestore={(version) => {
+          onRestore={() => {
             // Restore functionality handled by NoteHistory component
           }}
         />

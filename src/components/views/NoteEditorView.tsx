@@ -1,16 +1,21 @@
 import { useState, useEffect } from 'react';
-import { useTaskStore, useUIStore } from '@/stores';
+import { useTaskStore, useUIStore, useTemplateStore } from '@/stores';
 import { MarkdownEditor } from '@/components/notes/MarkdownEditor';
 import { MarkdownViewer } from '@/components/notes/MarkdownViewer';
 import { NoteHistory } from '@/components/notes/NoteHistory';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Save, X, Pin, Trash2, History } from 'lucide-react';
+import { TemplatePicker } from '@/components/templates/TemplatePicker';
+import { TemplateEditor } from '@/components/templates/TemplateEditor';
+import { toast } from '@/lib/toast';
+import type { TaskTemplate, NoteTemplate } from '@/types/template';
 
 export function NoteEditorView() {
   const { currentView, editorState, navigateBack } = useUIStore();
   const { getTask, addNote, updateNote, deleteNote, pinNote } = useTaskStore();
+  const { updateNoteTemplate } = useTemplateStore();
   
   const taskId = editorState?.taskId;
   const noteId = editorState?.noteId;
@@ -28,6 +33,19 @@ export function NoteEditorView() {
       setContent('');
     }
   }, [note]);
+
+  const handleApplyNoteTemplate = (template: TaskTemplate | NoteTemplate) => {
+    if (!('content' in template)) {
+      return;
+    }
+
+    setContent(template.content);
+    updateNoteTemplate(template.id, {
+      usageCount: template.usageCount + 1,
+      updatedAt: Date.now(),
+    });
+    toast.success('Template applied');
+  };
 
   if (!task || currentView !== 'note-editor') {
     return null;
@@ -113,6 +131,19 @@ export function NoteEditorView() {
                   </Button>
                 </>
               )}
+              <TemplatePicker
+                type="note"
+                onSelect={handleApplyNoteTemplate}
+              />
+              <TemplateEditor
+                type="note"
+                noteContent={content}
+                trigger={
+                  <Button variant="outline" size="sm" type="button">
+                    Save as Template
+                  </Button>
+                }
+              />
               <Button variant="outline" size="sm" onClick={handleClose} className="text-xs sm:text-sm">
                 <X className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
                 <span className="hidden sm:inline">Cancel</span>
@@ -183,7 +214,7 @@ export function NoteEditorView() {
           noteId={note.id}
           open={isHistoryOpen}
           onClose={() => setIsHistoryOpen(false)}
-          onRestore={(version) => {
+          onRestore={() => {
             // Restore functionality handled by NoteHistory component
           }}
         />

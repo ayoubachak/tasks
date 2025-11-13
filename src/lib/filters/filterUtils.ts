@@ -143,9 +143,6 @@ export function applyFilters(tasks: Task[], filters: Filter[]): Task[] {
 }
 
 export function createQuickFilters(): Array<{ id: string; label: string; filters: Filter[] }> {
-  const now = Date.now();
-  const today = startOfDay(new Date()).getTime();
-  const weekEnd = endOfWeek(new Date()).getTime();
 
   return [
     {

@@ -5,7 +5,6 @@ import { TaskEditor } from './TaskEditor';
 import { useState } from 'react';
 import { Plus, CheckSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { useTaskFilters } from '@/hooks/useTaskFilters';
 import { SearchBar } from '@/components/filters/SearchBar';
@@ -20,7 +19,6 @@ import { GroupedListView } from '@/components/views/GroupedListView';
 import { StatsDashboard } from '@/components/analytics/StatsDashboard';
 import { BulkActionsBar } from '@/components/bulk/BulkActionsBar';
 import { VirtualizedTaskList } from './VirtualizedTaskList';
-import { ListSkeleton } from '@/components/shared/Skeleton';
 
 export function TaskList() {
   const { getActiveWorkspace } = useWorkspaceStore();

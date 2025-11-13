@@ -1,4 +1,4 @@
-import type { Task, Note } from './task';
+import type { Task } from './task';
 
 export interface TaskTemplate {
   id: string;
