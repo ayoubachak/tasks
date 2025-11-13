@@ -26,14 +26,12 @@ import {
 } from 'lucide-react';
 import { useBackupStore } from '@/stores/backupStore';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
-import { useTaskStore } from '@/stores/taskStore';
-import { useTemplateStore } from '@/stores/templateStore';
-import { useImageStore } from '@/stores/imageStore';
 import { importFromJSONData } from '@/lib/import/json';
 import { format } from 'date-fns';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { exportToJSON, downloadJSON } from '@/lib/export/json';
 import { formatBytes, estimateDataSize } from '@/lib/storage/storageUtils';
+import { collectAllData } from '@/lib/export/dataCollector';
 
 interface BackupManagerProps {
   trigger?: React.ReactNode;
@@ -48,43 +46,32 @@ export function BackupManager({ trigger }: BackupManagerProps) {
   const [restoreResult, setRestoreResult] = useState<{ success: boolean; message: string } | null>(null);
 
   const { backups, createBackup, deleteBackup, restoreBackup } = useBackupStore();
-  const { workspaces, getActiveWorkspace } = useWorkspaceStore();
-  const { tasks } = useTaskStore();
-  const { taskTemplates, noteTemplates } = useTemplateStore();
-  const imageStore = useImageStore();
-
-  const getAllImages = () => {
-    const allIds = imageStore.getAllImageIds();
-    return allIds.map((id) => imageStore.getImage(id)).filter((img): img is NonNullable<typeof img> => img !== undefined);
-  };
+  const { getActiveWorkspace } = useWorkspaceStore();
 
   const handleCreateBackup = async () => {
     if (!backupName.trim()) return;
 
     setIsCreating(true);
     try {
+      // Collect all data
+      const allData = collectAllData();
       const activeWorkspace = getActiveWorkspace();
-      const tasksToBackup = activeWorkspace
-        ? tasks.filter((t) => t.workspaceId === activeWorkspace.id)
-        : tasks;
-
-      const allImages = getAllImages();
-      const exportData = {
-        version: '1.0.0',
-        exportDate: Date.now(),
-        workspaces: activeWorkspace ? [activeWorkspace] : workspaces,
-        tasks: tasksToBackup,
-        templates: {
-          tasks: taskTemplates,
-          notes: noteTemplates,
-        },
-        images: allImages,
-        metadata: {
-          totalTasks: tasksToBackup.length,
-          totalWorkspaces: activeWorkspace ? 1 : workspaces.length,
-          totalTemplates: taskTemplates.length + noteTemplates.length,
-        },
-      };
+      
+      // Filter by active workspace if one is selected
+      const exportData = activeWorkspace
+        ? {
+            ...allData,
+            workspaces: [activeWorkspace],
+            tasks: allData.tasks.filter((t) => t.workspaceId === activeWorkspace.id),
+            standaloneNotes: allData.standaloneNotes?.filter((n) => n.workspaceId === activeWorkspace.id),
+            folders: allData.folders?.filter((f) => f.workspaceId === activeWorkspace.id),
+            metadata: {
+              ...allData.metadata,
+              totalTasks: allData.tasks.filter((t) => t.workspaceId === activeWorkspace.id).length,
+              totalWorkspaces: 1,
+            },
+          }
+        : allData;
 
       const estimatedSize = estimateDataSize(exportData);
       const canStore = useBackupStore.getState().canStoreBackup(estimatedSize);
@@ -98,11 +85,13 @@ export function BackupManager({ trigger }: BackupManagerProps) {
 
         if (confirmed) {
           const jsonData = exportToJSON(
-            activeWorkspace ? [activeWorkspace] : workspaces,
-            tasksToBackup,
-            taskTemplates,
-            noteTemplates,
-            allImages
+            exportData.workspaces,
+            exportData.tasks,
+            exportData.templates.tasks,
+            exportData.templates.notes,
+            exportData.images,
+            exportData.standaloneNotes,
+            exportData.folders
           );
           downloadJSON(jsonData, `backup-${backupName}-${new Date().toISOString().split('T')[0]}.json`);
           setBackupName('');
@@ -121,11 +110,13 @@ export function BackupManager({ trigger }: BackupManagerProps) {
         if (!backup.storedLocally) {
           // Backup created but not stored, download it
           const jsonData = exportToJSON(
-            activeWorkspace ? [activeWorkspace] : workspaces,
-            tasksToBackup,
-            taskTemplates,
-            noteTemplates,
-            allImages
+            exportData.workspaces,
+            exportData.tasks,
+            exportData.templates.tasks,
+            exportData.templates.notes,
+            exportData.images,
+            exportData.standaloneNotes,
+            exportData.folders
           );
           downloadJSON(jsonData, `backup-${backupName}-${new Date().toISOString().split('T')[0]}.json`);
           alert('Backup is too large to store locally. It has been downloaded to your computer.');

@@ -18,9 +18,7 @@ import {
 } from '@/components/ui/select';
 import { Download, FileJson, FileText, FileSpreadsheet } from 'lucide-react';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
-import { useTaskStore } from '@/stores/taskStore';
-import { useTemplateStore } from '@/stores/templateStore';
-import { useImageStore } from '@/stores/imageStore';
+import { collectAllData } from '@/lib/export/dataCollector';
 import { exportToJSON, downloadJSON } from '@/lib/export/json';
 import { exportTasksToCSV, downloadCSV } from '@/lib/export/csv';
 import { exportTasksToMarkdown, downloadMarkdown } from '@/lib/export/markdown';
@@ -34,24 +32,26 @@ export function ExportDialog({ trigger }: ExportDialogProps) {
   const [format, setFormat] = useState<'json' | 'csv' | 'markdown'>('json');
   const [exporting, setExporting] = useState(false);
 
-  const { workspaces, getActiveWorkspace } = useWorkspaceStore();
-  const { tasks } = useTaskStore();
-  const { taskTemplates, noteTemplates } = useTemplateStore();
-  const imageStore = useImageStore();
-  
-  const getAllImages = () => {
-    const allIds = imageStore.getAllImageIds();
-    return allIds.map((id) => imageStore.getImage(id)).filter((img): img is NonNullable<typeof img> => img !== undefined);
-  };
+  const { getActiveWorkspace } = useWorkspaceStore();
 
   const handleExport = () => {
     setExporting(true);
 
     try {
+      // Collect all data
+      const allData = collectAllData();
       const activeWorkspace = getActiveWorkspace();
-      const tasksToExport = activeWorkspace
-        ? tasks.filter((t) => t.workspaceId === activeWorkspace.id)
-        : tasks;
+      
+      // Filter by active workspace if one is selected
+      const filteredData = activeWorkspace
+        ? {
+            ...allData,
+            workspaces: [activeWorkspace],
+            tasks: allData.tasks.filter((t) => t.workspaceId === activeWorkspace.id),
+            standaloneNotes: allData.standaloneNotes?.filter((n) => n.workspaceId === activeWorkspace.id),
+            folders: allData.folders?.filter((f) => f.workspaceId === activeWorkspace.id),
+          }
+        : allData;
 
       let data: string;
       let filename: string;
@@ -59,26 +59,27 @@ export function ExportDialog({ trigger }: ExportDialogProps) {
 
       switch (format) {
         case 'json': {
-          const allImages = getAllImages();
           data = exportToJSON(
-            activeWorkspace ? [activeWorkspace] : workspaces,
-            tasksToExport,
-            taskTemplates,
-            noteTemplates,
-            allImages
+            filteredData.workspaces,
+            filteredData.tasks,
+            filteredData.templates.tasks,
+            filteredData.templates.notes,
+            filteredData.images,
+            filteredData.standaloneNotes,
+            filteredData.folders
           );
           filename = `tasks-export-${new Date().toISOString().split('T')[0]}.json`;
           downloadFn = downloadJSON;
           break;
         }
         case 'csv': {
-          data = exportTasksToCSV(tasksToExport);
+          data = exportTasksToCSV(filteredData.tasks);
           filename = `tasks-export-${new Date().toISOString().split('T')[0]}.csv`;
           downloadFn = downloadCSV;
           break;
         }
         case 'markdown': {
-          data = exportTasksToMarkdown(tasksToExport);
+          data = exportTasksToMarkdown(filteredData.tasks);
           filename = `tasks-export-${new Date().toISOString().split('T')[0]}.md`;
           downloadFn = downloadMarkdown;
           break;

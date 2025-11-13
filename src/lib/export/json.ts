@@ -1,36 +1,57 @@
-import type { Task, Workspace } from '@/types';
+import type { Task, Workspace, Note } from '@/types';
 import type { TaskTemplate, NoteTemplate } from '@/types/template';
 import type { StoredImage } from '@/stores/imageStore';
+import type { NoteFolder } from '@/types/task';
 
 export interface ExportData {
   version: string;
   exportDate: number;
   workspaces: Workspace[];
-  tasks: Task[];
+  tasks: Task[]; // Tasks include their notes, subtasks, checklists, dependencies, etc.
+  standaloneNotes?: Note[]; // Notes not linked to tasks
+  folders?: NoteFolder[]; // Note folders
   templates: {
     tasks: TaskTemplate[];
     notes: NoteTemplate[];
   };
   images: StoredImage[];
+  noteHistories?: Record<string, Array<{
+    noteId: string;
+    version: number;
+    content: string;
+    updatedAt: number;
+    isCurrent: boolean;
+  }>>; // Note version history
   metadata: {
     totalTasks: number;
     totalWorkspaces: number;
     totalTemplates: number;
+    totalNotes?: number;
+    totalFolders?: number;
+    totalImages?: number;
   };
 }
 
+/**
+ * Export data to JSON string
+ * @deprecated Use collectAllData() from dataCollector.ts instead for complete data collection
+ */
 export function exportToJSON(
   workspaces: Workspace[],
   tasks: Task[],
   taskTemplates: TaskTemplate[],
   noteTemplates: NoteTemplate[],
-  images: StoredImage[]
+  images: StoredImage[],
+  standaloneNotes?: Note[],
+  folders?: NoteFolder[]
 ): string {
   const exportData: ExportData = {
     version: '1.0.0',
     exportDate: Date.now(),
     workspaces,
     tasks,
+    standaloneNotes,
+    folders,
     templates: {
       tasks: taskTemplates,
       notes: noteTemplates,
@@ -40,6 +61,9 @@ export function exportToJSON(
       totalTasks: tasks.length,
       totalWorkspaces: workspaces.length,
       totalTemplates: taskTemplates.length + noteTemplates.length,
+      totalNotes: standaloneNotes?.length,
+      totalFolders: folders?.length,
+      totalImages: images.length,
     },
   };
 
