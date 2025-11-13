@@ -10,4 +10,5 @@ export * from './backupStore';
 export * from './noteHistoryStore';
 export * from './noteFolderStore';
 export * from './syncStore';
+export * from './themeStore';
 

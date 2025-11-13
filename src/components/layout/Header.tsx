@@ -5,6 +5,7 @@ import { GoogleSyncButton } from '@/components/sync/GoogleSyncButton';
 import { SyncButton } from '@/components/sync/SyncButton';
 import { PullButton } from '@/components/sync/PullButton';
 import { SyncStatus } from '@/components/sync/SyncStatus';
+import { ThemeSettings } from '@/components/theme/ThemeSettings';
 import { AppLogo } from '@/components/shared/AppLogo';
 import { useSyncStore } from '@/stores/syncStore';
 import { Button } from '@/components/ui/button';
@@ -56,6 +57,7 @@ export function Header({ onMobileMenuToggle }: HeaderProps) {
           <ExportDialog />
           <ImportDialog />
           <BackupManager />
+          <ThemeSettings />
         </div>
 
         {/* Mobile actions - dropdown menu */}
@@ -106,6 +108,12 @@ export function Header({ onMobileMenuToggle }: HeaderProps) {
             <DropdownMenuItem asChild>
               <div className="w-full">
                 <BackupManager />
+              </div>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <div className="w-full">
+                <ThemeSettings />
               </div>
             </DropdownMenuItem>
           </DropdownMenuContent>

@@ -7,6 +7,7 @@ import { NoteEditorView } from './components/views/NoteEditorView';
 import { KeyboardShortcuts } from './components/shared/KeyboardShortcuts';
 import { CommandPalette } from './components/shared/CommandPalette';
 import { ErrorBoundary } from './components/shared/ErrorBoundary';
+import { ThemeProvider } from './components/theme/ThemeProvider';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
 import { Toaster } from './components/ui/toaster';
 import { storage } from './lib/storage/localStorage';
@@ -56,18 +57,19 @@ function App() {
   // Always render the main layout, modals render on top
   return (
     <ErrorBoundary>
-      <KeyboardShortcuts
-        onNewTask={handleNewTask}
-        onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
-        onFocusSearch={handleFocusSearch}
-      />
-      <CommandPalette
-        open={isCommandPaletteOpen}
-        onOpenChange={setIsCommandPaletteOpen}
-        onNewTask={handleNewTask}
-        onNavigateToTask={handleNavigateToTask}
-      />
-      <AppLayout>
+      <ThemeProvider>
+        <KeyboardShortcuts
+          onNewTask={handleNewTask}
+          onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
+          onFocusSearch={handleFocusSearch}
+        />
+        <CommandPalette
+          open={isCommandPaletteOpen}
+          onOpenChange={setIsCommandPaletteOpen}
+          onNewTask={handleNewTask}
+          onNavigateToTask={handleNavigateToTask}
+        />
+        <AppLayout>
         <ErrorBoundary>
           <div className="flex flex-col min-h-full">
             <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'tasks' | 'notes')} className="flex flex-col flex-1 min-h-0">
@@ -102,6 +104,7 @@ function App() {
         </ErrorBoundary>
       )}
       <Toaster />
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }
