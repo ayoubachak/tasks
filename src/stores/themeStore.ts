@@ -48,7 +48,7 @@ interface ThemeState {
 }
 
 // Predefined themes
-const defaultThemes: Theme[] = [
+export const defaultThemes: Theme[] = [
   {
     id: 'light',
     name: 'Light',
@@ -198,9 +198,17 @@ export const useThemeStore = create<ThemeState>()(
 
       setTheme: (themeId: string) => {
         set({ currentTheme: themeId });
-        const theme = get().themes.find((t) => t.id === themeId);
+        const state = get();
+        // Ensure themes always includes defaults
+        const allThemes = state.themes && state.themes.length > 0 ? state.themes : defaultThemes;
+        const theme = allThemes.find((t) => t.id === themeId);
         if (theme) {
           get().applyTheme(theme);
+        } else {
+          // If theme not found, ensure themes are set correctly
+          if (!state.themes || state.themes.length === 0) {
+            set({ themes: defaultThemes });
+          }
         }
       },
 
@@ -244,10 +252,15 @@ export const useThemeStore = create<ThemeState>()(
 
       getCurrentTheme: () => {
         const state = get();
-        if (!state.themes || !state.currentTheme) {
+        // Ensure themes always includes defaults
+        const allThemes = state.themes && state.themes.length > 0 
+          ? state.themes 
+          : defaultThemes;
+        
+        if (!state.currentTheme) {
           return defaultThemes.find((t) => t.id === 'dark');
         }
-        return state.themes.find((t) => t.id === state.currentTheme);
+        return allThemes.find((t) => t.id === state.currentTheme) || defaultThemes.find((t) => t.id === 'dark');
       },
 
       applyTheme: (theme: Theme) => {
@@ -295,26 +308,41 @@ export const useThemeStore = create<ThemeState>()(
         themes: state.themes.filter((t) => t.isCustom),
         mode: state.mode,
       }),
-      onRehydrateStorage: (state) => {
-        // Merge custom themes with defaults after rehydration
-        if (state) {
-          // Ensure themes array exists and filter custom themes
-          const customThemes = (state.themes || []).filter((t) => t?.isCustom);
-          state.themes = [...defaultThemes, ...customThemes];
-          
-          // Ensure currentTheme is set
-          if (!state.currentTheme) {
-            state.currentTheme = 'dark';
-          }
-          
-          // Apply theme after rehydration (use setTimeout to ensure DOM is ready)
-          setTimeout(() => {
-            const theme = state.getCurrentTheme();
-            if (theme) {
-              state.applyTheme(theme);
+      merge: (persistedState, currentState) => {
+        // Merge persisted state with current state, ensuring defaults are always included
+        const persisted = persistedState as Partial<ThemeState>;
+        const customThemes = (persisted?.themes || []).filter((t) => t?.isCustom);
+        
+        return {
+          ...currentState,
+          ...persisted,
+          themes: [...defaultThemes, ...customThemes],
+          currentTheme: persisted?.currentTheme || currentState.currentTheme,
+          mode: persisted?.mode || currentState.mode,
+        };
+      },
+      onRehydrateStorage: () => {
+        return (state) => {
+          // Ensure themes are always set correctly after rehydration
+          if (state) {
+            // Ensure themes array always includes defaults
+            const customThemes = (state.themes || []).filter((t) => t?.isCustom);
+            state.themes = [...defaultThemes, ...customThemes];
+            
+            // Ensure currentTheme is set
+            if (!state.currentTheme) {
+              state.currentTheme = 'dark';
             }
-          }, 0);
-        }
+            
+            // Apply theme after rehydration (use setTimeout to ensure DOM is ready)
+            setTimeout(() => {
+              const theme = state.getCurrentTheme();
+              if (theme) {
+                state.applyTheme(theme);
+              }
+            }, 0);
+          }
+        };
       },
     }
   )

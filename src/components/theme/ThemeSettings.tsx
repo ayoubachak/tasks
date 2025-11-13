@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useThemeStore, type Theme } from '@/stores/themeStore';
+import { useThemeStore, type Theme, defaultThemes } from '@/stores/themeStore';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -26,8 +26,10 @@ export function ThemeSettings() {
 
   const currentThemeData = getCurrentTheme();
   // Separate predefined and custom themes
-  const predefinedThemes = themes.filter((t) => !t.isCustom);
-  const customThemes = themes.filter((t) => t.isCustom);
+  // Ensure we always have default themes even if store is corrupted
+  const allThemes = themes && themes.length > 0 ? themes : defaultThemes;
+  const predefinedThemes = allThemes.filter((t) => !t.isCustom);
+  const customThemes = allThemes.filter((t) => t.isCustom);
 
   const handleCreateCustomTheme = () => {
     if (!customThemeName.trim()) {
