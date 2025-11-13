@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { WorkspaceEditor } from '@/components/workspace/WorkspaceEditor';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
 
 const colorPresets = [
   '#3b82f6', // blue
@@ -33,9 +34,11 @@ const colorPresets = [
 interface SidebarProps {
   collapsed?: boolean;
   onToggleCollapse?: () => void;
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
 }
 
-export function Sidebar({ collapsed = false, onToggleCollapse }: SidebarProps) {
+export function Sidebar({ collapsed = false, onToggleCollapse, mobileOpen = false, onMobileClose }: SidebarProps) {
   const { workspaces, activeWorkspaceId, setActiveWorkspace, updateWorkspace, deleteWorkspace, setActiveWorkspace: setActive } = useWorkspaceStore();
   const { getTasksByWorkspace, deleteTask } = useTaskStore();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -95,14 +98,8 @@ export function Sidebar({ collapsed = false, onToggleCollapse }: SidebarProps) {
     setIsDeleting(null);
   };
 
-  return (
-    <aside 
-      className={cn(
-        'hidden md:flex border-r bg-muted/40 flex-col transition-all duration-300 relative group',
-        collapsed ? 'w-16' : 'w-64'
-      )}
-      aria-label="Workspace navigation"
-    >
+  const sidebarContent = (
+    <>
       <div className={cn(
         "flex h-16 items-center transition-all",
         collapsed ? "px-2 justify-center" : "px-4 justify-between"
@@ -120,6 +117,7 @@ export function Sidebar({ collapsed = false, onToggleCollapse }: SidebarProps) {
           <Plus className="h-4 w-4" />
         </Button>
           )}
+          {onToggleCollapse && (
           <Button
             variant={collapsed ? "default" : "ghost"}
             size="icon"
@@ -137,6 +135,7 @@ export function Sidebar({ collapsed = false, onToggleCollapse }: SidebarProps) {
               <ChevronLeft className="h-4 w-4" />
             )}
           </Button>
+          )}
         </div>
       </div>
       <Separator />
@@ -164,7 +163,10 @@ export function Sidebar({ collapsed = false, onToggleCollapse }: SidebarProps) {
                     <Popover>
                       <PopoverTrigger asChild>
                         <button
-                          onClick={() => setActiveWorkspace(workspace.id)}
+                          onClick={() => {
+                            setActiveWorkspace(workspace.id);
+                            onMobileClose?.();
+                          }}
                           className={cn(
                             'w-full flex items-center justify-center rounded-md p-2 transition-colors',
                             activeWorkspaceId === workspace.id
@@ -278,7 +280,10 @@ export function Sidebar({ collapsed = false, onToggleCollapse }: SidebarProps) {
                           </PopoverContent>
                         </Popover>
                         <button
-                          onClick={() => setActiveWorkspace(workspace.id)}
+                          onClick={() => {
+                            setActiveWorkspace(workspace.id);
+                            onMobileClose?.();
+                          }}
                           className="flex-1 flex items-center gap-2 min-w-0 text-left"
                           aria-label={`Switch to ${workspace.name} workspace`}
                           aria-pressed={activeWorkspaceId === workspace.id}
@@ -347,6 +352,35 @@ export function Sidebar({ collapsed = false, onToggleCollapse }: SidebarProps) {
         open={isEditorOpen}
         onClose={handleCloseEditor}
       />
+    </>
+  );
+
+  // Mobile: Render as Sheet (drawer)
+  if (onMobileClose !== undefined) {
+    return (
+      <Sheet open={mobileOpen} onOpenChange={(open) => !open && onMobileClose()}>
+        <SheetContent side="left" className="w-[280px] p-0" showCloseButton={false}>
+          <aside 
+            className="flex border-r bg-muted/40 flex-col h-full"
+            aria-label="Workspace navigation"
+          >
+            {sidebarContent}
+          </aside>
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
+  // Desktop: Render as regular sidebar
+  return (
+    <aside 
+      className={cn(
+        'hidden md:flex border-r bg-muted/40 flex-col transition-all duration-300 relative group',
+        collapsed ? 'w-16' : 'w-64'
+      )}
+      aria-label="Workspace navigation"
+    >
+      {sidebarContent}
     </aside>
   );
 }

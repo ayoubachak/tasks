@@ -8,16 +8,31 @@ interface AppLayoutProps {
 
 export function AppLayout({ children }: AppLayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <Sidebar 
-        collapsed={sidebarCollapsed} 
-        onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)} 
-      />
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <Header />
-        <main className="flex-1 overflow-hidden p-4 sm:p-6" role="main">
+      {/* Desktop Sidebar - Hidden on mobile */}
+      <div className="hidden md:block">
+        <Sidebar 
+          collapsed={sidebarCollapsed} 
+          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)} 
+        />
+      </div>
+      
+      {/* Mobile Sidebar Drawer */}
+      <div className="md:hidden">
+        <Sidebar 
+          collapsed={false}
+          mobileOpen={mobileMenuOpen}
+          onMobileClose={() => setMobileMenuOpen(false)}
+          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)} 
+        />
+      </div>
+
+      <div className="flex flex-1 flex-col overflow-hidden min-w-0">
+        <Header onMobileMenuToggle={() => setMobileMenuOpen(!mobileMenuOpen)} />
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-4 md:p-6" role="main">
           {children}
         </main>
       </div>

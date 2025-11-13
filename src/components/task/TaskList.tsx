@@ -172,9 +172,9 @@ export function TaskList() {
   };
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col min-h-0 overflow-hidden">
       {/* Header */}
-      <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div className="mb-3 md:mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 flex-shrink-0">
         <div>
           <h2 className="text-xl sm:text-2xl font-bold">{activeWorkspace.name}</h2>
           <p className="text-sm text-muted-foreground">

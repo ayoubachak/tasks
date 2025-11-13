@@ -72,22 +72,22 @@ function App() {
       />
       <AppLayout>
         <ErrorBoundary>
-          <div className="h-full flex flex-col">
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'tasks' | 'notes')} className="flex-1 flex flex-col min-h-0">
-              <TabsList className="mb-4 w-fit flex-shrink-0">
-                <TabsTrigger value="tasks" className="flex items-center gap-2">
+          <div className="h-full flex flex-col min-h-0 overflow-hidden">
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'tasks' | 'notes')} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              <TabsList className="mb-3 md:mb-4 w-fit flex-shrink-0">
+                <TabsTrigger value="tasks" className="flex items-center gap-2 text-sm md:text-base">
                   <CheckSquare className="h-4 w-4" />
-                  Tasks
+                  <span className="hidden sm:inline">Tasks</span>
                 </TabsTrigger>
-                <TabsTrigger value="notes" className="flex items-center gap-2">
+                <TabsTrigger value="notes" className="flex items-center gap-2 text-sm md:text-base">
                   <StickyNote className="h-4 w-4" />
-                  Notes
+                  <span className="hidden sm:inline">Notes</span>
                 </TabsTrigger>
               </TabsList>
-              <TabsContent value="tasks" className="flex-1 mt-0 min-h-0">
+              <TabsContent value="tasks" className="flex-1 mt-0 min-h-0 overflow-hidden">
                 <TaskList />
               </TabsContent>
-              <TabsContent value="notes" className="flex-1 mt-0 min-h-0">
+              <TabsContent value="notes" className="flex-1 mt-0 min-h-0 overflow-hidden">
                 <NotesList />
               </TabsContent>
             </Tabs>

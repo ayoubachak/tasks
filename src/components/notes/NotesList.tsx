@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useTaskStore, useWorkspaceStore, useNoteFolderStore } from '@/stores';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -116,9 +115,9 @@ export function NotesList() {
   }
 
   return (
-    <div className="flex h-full gap-4">
-      {/* Folder Sidebar */}
-      <div className="w-64 flex-shrink-0">
+    <div className="flex h-full gap-2 md:gap-4 min-h-0 overflow-hidden">
+      {/* Folder Sidebar - Hidden on mobile, shown via button */}
+      <div className="hidden md:block w-64 flex-shrink-0">
         <FolderTree
           selectedFolderId={selectedFolderId}
           onSelectFolder={setSelectedFolderId}
@@ -128,9 +127,9 @@ export function NotesList() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
         {/* Header */}
-        <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="mb-3 md:mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 flex-shrink-0">
           <div>
             <h2 className="text-xl sm:text-2xl font-bold">
               {selectedFolder ? (
@@ -153,7 +152,7 @@ export function NotesList() {
         </div>
 
       {/* Search */}
-      <div className="mb-4">
+      <div className="mb-3 md:mb-4 flex-shrink-0">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -176,11 +175,11 @@ export function NotesList() {
       </div>
 
       {/* Notes List */}
-      <ScrollArea className="flex-1">
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden -mx-3 md:mx-0 px-3 md:px-0">
         {sortedNotes.length === 0 ? (
-          <div className="flex h-full items-center justify-center">
-            <div className="text-center">
-              <p className="text-lg font-medium text-muted-foreground">
+          <div className="flex h-full min-h-[200px] items-center justify-center">
+            <div className="text-center px-4">
+              <p className="text-base md:text-lg font-medium text-muted-foreground">
                 {searchQuery ? 'No notes found' : 'No notes yet'}
               </p>
               <p className="mt-2 text-sm text-muted-foreground">
@@ -191,7 +190,7 @@ export function NotesList() {
             </div>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2 md:space-y-3 pb-2">
             {sortedNotes.map(({ note, taskId, taskTitle, noteTitle }) => (
               <Card
                 key={note.id}
@@ -274,7 +273,7 @@ export function NotesList() {
             ))}
           </div>
         )}
-      </ScrollArea>
+      </div>
 
       {/* Note History */}
       {selectedNote && selectedNote.taskId && (
