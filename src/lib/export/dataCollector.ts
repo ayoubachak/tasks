@@ -7,8 +7,7 @@
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useTaskStore } from '@/stores/taskStore';
 import { useTemplateStore } from '@/stores/templateStore';
-import { useImageStore } from '@/stores/imageStore';
-import { useAudioStore } from '@/stores/audioStore';
+import { useMediaStore } from '@/stores/mediaStore';
 import { useNoteFolderStore } from '@/stores/noteFolderStore';
 import { useNoteHistoryStore } from '@/stores/noteHistoryStore';
 import type { ExportData } from './json';
@@ -22,22 +21,15 @@ export function collectAllData(): ExportData {
   const workspaceStore = useWorkspaceStore.getState();
   const taskStore = useTaskStore.getState();
   const templateStore = useTemplateStore.getState();
-  const imageStore = useImageStore.getState();
-  const audioStore = useAudioStore.getState();
+  const mediaStore = useMediaStore.getState();
   const noteFolderStore = useNoteFolderStore.getState();
   const noteHistoryStore = useNoteHistoryStore.getState();
 
-  // Collect all images
-  const allImageIds = imageStore.getAllImageIds();
-  const images = allImageIds
-    .map((id) => imageStore.getImage(id))
-    .filter((img): img is NonNullable<typeof img> => img !== undefined);
-
-  // Collect all audio
-  const allAudioIds = audioStore.getAllAudioIds();
-  const audios = allAudioIds
-    .map((id) => audioStore.getAudio(id))
-    .filter((audio): audio is NonNullable<typeof audio> => audio !== undefined);
+  // Collect all media assets
+  const media = mediaStore.getAllMedia();
+  const images = media.filter((asset) => asset.type === 'image' || asset.type === 'photo');
+  const audios = media.filter((asset) => asset.type === 'audio');
+  const videos = media.filter((asset) => asset.type === 'video');
 
   // Collect all notes (standalone + task notes)
   const allNotes = taskStore.getAllNotes();
@@ -72,7 +64,8 @@ export function collectAllData(): ExportData {
       tasks: templateStore.taskTemplates,
       notes: templateStore.noteTemplates,
     },
-    images: images,
+    media,
+    images,
     audios,
     noteHistories: noteHistories, // Include note version history
     metadata: {
@@ -81,8 +74,13 @@ export function collectAllData(): ExportData {
       totalTemplates: templateStore.taskTemplates.length + templateStore.noteTemplates.length,
       totalNotes: allNotes.length,
       totalFolders: folders.length,
-      totalImages: images.length,
-      totalAudios: audios.length,
+      totalMedia: media.length,
+      mediaBreakdown: {
+        image: images.length,
+        audio: audios.length,
+        video: videos.length,
+        photo: media.filter((asset) => asset.type === 'photo').length,
+      },
     },
   };
 

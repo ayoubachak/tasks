@@ -1,7 +1,6 @@
 import type { Task, Workspace, Note } from '@/types';
 import type { TaskTemplate, NoteTemplate } from '@/types/template';
-import type { StoredImage } from '@/stores/imageStore';
-import type { StoredAudio } from '@/stores/audioStore';
+import type { StoredMedia, MediaType } from '@/stores/mediaStore';
 import type { NoteFolder } from '@/types/task';
 
 export interface ExportData {
@@ -15,8 +14,9 @@ export interface ExportData {
     tasks: TaskTemplate[];
     notes: NoteTemplate[];
   };
-  images: StoredImage[];
-  audios?: StoredAudio[];
+  media: StoredMedia[];
+  images?: StoredMedia[]; // Legacy compatibility
+  audios?: StoredMedia[]; // Legacy compatibility
   noteHistories?: Record<string, Array<{
     noteId: string;
     version: number;
@@ -30,8 +30,8 @@ export interface ExportData {
     totalTemplates: number;
     totalNotes?: number;
     totalFolders?: number;
-    totalImages?: number;
-    totalAudios?: number;
+    totalMedia?: number;
+    mediaBreakdown?: Partial<Record<MediaType, number>>;
   };
 }
 
@@ -41,8 +41,17 @@ export interface ExportData {
  */
 export function exportToJSON(exportData: ExportData): string {
   // Ensure metadata is up to date
+  const media = exportData.media ?? [];
+  const mediaBreakdown = media.reduce<Record<MediaType, number>>((acc, asset) => {
+    acc[asset.type] = (acc[asset.type] ?? 0) + 1;
+    return acc;
+  }, {} as Record<MediaType, number>);
+
   const dataWithMetadata: ExportData = {
     ...exportData,
+    media,
+    images: exportData.images ?? media.filter((asset) => asset.type === 'image' || asset.type === 'photo'),
+    audios: exportData.audios ?? media.filter((asset) => asset.type === 'audio'),
     exportDate: Date.now(),
     metadata: {
       totalTasks: exportData.tasks.length,
@@ -50,8 +59,8 @@ export function exportToJSON(exportData: ExportData): string {
       totalTemplates: (exportData.templates.tasks?.length || 0) + (exportData.templates.notes?.length || 0),
       totalNotes: exportData.standaloneNotes?.length,
       totalFolders: exportData.folders?.length,
-      totalImages: exportData.images.length,
-      totalAudios: exportData.audios?.length,
+      totalMedia: media.length,
+      mediaBreakdown,
     },
   };
 
@@ -65,6 +74,36 @@ export function importFromJSON(jsonString: string): ExportData | null {
     // Validate structure
     if (!data.workspaces || !data.tasks) {
       throw new Error('Invalid export format: missing workspaces or tasks');
+    }
+
+    if (!Array.isArray(data.media)) {
+      data.media = [];
+    }
+
+    if (Array.isArray(data.images) && data.images.length > 0) {
+      data.images.forEach((legacy) => {
+        if (!legacy) return;
+        const normalized: StoredMedia = {
+          ...legacy,
+          type: legacy.type ?? 'image',
+        };
+        if (!data.media.find((item) => item.id === normalized.id)) {
+          data.media.push(normalized);
+        }
+      });
+    }
+
+    if (Array.isArray(data.audios) && data.audios.length > 0) {
+      data.audios.forEach((legacy) => {
+        if (!legacy) return;
+        const normalized: StoredMedia = {
+          ...legacy,
+          type: legacy.type ?? 'audio',
+        };
+        if (!data.media.find((item) => item.id === normalized.id)) {
+          data.media.push(normalized);
+        }
+      });
     }
 
     return data;

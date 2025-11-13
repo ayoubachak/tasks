@@ -9,8 +9,7 @@ export const STORAGE_KEYS = {
   WORKSPACES: 'workspace-storage',
   TASKS: 'task-storage',
   TEMPLATES: 'template-storage',
-  IMAGES: 'image-storage',
-  AUDIOS: 'audio-storage',
+  MEDIA: 'media-storage',
   NOTE_FOLDERS: 'note-folder-storage',
   NOTE_HISTORIES: 'note-history-storage',
   

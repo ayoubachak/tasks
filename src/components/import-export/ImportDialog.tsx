@@ -44,7 +44,16 @@ export function ImportDialog({ trigger }: ImportDialogProps) {
       if (!data) {
         setResult({
           success: false,
-          imported: { workspaces: 0, tasks: 0, templates: 0, images: 0 },
+          imported: {
+            workspaces: 0,
+            tasks: 0,
+            templates: 0,
+            media: 0,
+            images: 0,
+            audios: 0,
+            videos: 0,
+            photos: 0,
+          },
           errors: ['Invalid JSON format or corrupted file'],
         });
         setImporting(false);
@@ -52,12 +61,15 @@ export function ImportDialog({ trigger }: ImportDialogProps) {
       }
 
       // Show confirmation dialog with image count
-      const imageCount = data.images?.length || 0;
-      const imageWarning = imageCount > 0 
-        ? `\n\nNote: This export contains ${imageCount} image(s). Large images may be skipped if storage is limited.`
+      const mediaCount =
+        data.media?.length ??
+        (data.images?.length || 0) +
+          (data.audios?.length || 0);
+      const mediaWarning = mediaCount > 0
+        ? `\n\nNote: This export contains ${mediaCount} media asset(s). Large files may be skipped if storage is limited.`
         : '';
       const confirmed = confirm(
-        `Import ${data.metadata.totalTasks} tasks, ${data.metadata.totalWorkspaces} workspaces, and ${data.metadata.totalTemplates} templates?${imageWarning}`
+        `Import ${data.metadata.totalTasks} tasks, ${data.metadata.totalWorkspaces} workspaces, and ${data.metadata.totalTemplates} templates?${mediaWarning}`
       );
 
       if (!confirmed) {
@@ -83,7 +95,16 @@ export function ImportDialog({ trigger }: ImportDialogProps) {
       console.error('Import failed:', error);
       setResult({
         success: false,
-        imported: { workspaces: 0, tasks: 0, templates: 0, images: 0 },
+        imported: {
+          workspaces: 0,
+          tasks: 0,
+          templates: 0,
+          media: 0,
+          images: 0,
+          audios: 0,
+          videos: 0,
+          photos: 0,
+        },
         errors: [`Import failed: ${error}`],
       });
     } finally {
@@ -142,8 +163,12 @@ export function ImportDialog({ trigger }: ImportDialogProps) {
                       <li>{result.imported.workspaces} workspaces</li>
                       <li>{result.imported.tasks} tasks</li>
                       <li>{result.imported.templates} templates</li>
-                      <li>{result.imported.images} images</li>
-                      <li>{result.imported.audios} audio recordings</li>
+                      <li>
+                        {result.imported.media} media assets
+                        <span className="block text-muted-foreground text-xs">
+                          images/photos: {result.imported.images}, audio: {result.imported.audios}, video: {result.imported.videos}
+                        </span>
+                      </li>
                     </ul>
                   </div>
                 ) : (

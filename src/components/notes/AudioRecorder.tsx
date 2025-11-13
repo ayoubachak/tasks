@@ -2,33 +2,34 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Mic, Square, Pause, Play, X } from 'lucide-react';
 import { useAudioRecord } from '@/hooks/useAudioRecord';
-import { useAudioStore, createAudioReference } from '@/stores/audioStore';
+import { useMediaStore, createMediaReference } from '@/stores';
 import { toast } from '@/lib/toast';
 import { cn } from '@/lib/utils';
 
 interface AudioRecorderProps {
-  onInsert: (audioMarkdown: string) => void;
-  onClose?: () => void;
-  className?: string;
+  readonly onInsert: (audioMarkdown: string) => void;
+  readonly onClose?: () => void;
+  readonly className?: string;
 }
 
 export function AudioRecorder({ onInsert, onClose, className }: AudioRecorderProps) {
-  const { storeAudio } = useAudioStore();
+  const storeMedia = useMediaStore((state) => state.storeMedia);
   const [hasStarted, setHasStarted] = useState(false);
 
   const handleRecordComplete = (audio: { data: string; mimeType: string; filename: string; size: number; duration?: number }) => {
     try {
       // Store audio and get short reference ID
-      const audioId = storeAudio(
-        audio.data,
-        audio.mimeType,
-        audio.filename,
-        audio.size,
-        audio.duration
-      );
+      const audioId = storeMedia({
+        type: 'audio',
+        data: audio.data,
+        mimeType: audio.mimeType,
+        filename: audio.filename,
+        size: audio.size,
+        duration: audio.duration,
+      });
       
       // Create markdown with short reference
-      const audioRef = createAudioReference(audioId);
+      const audioRef = createMediaReference(audioId);
       const alt = audio.filename?.replace(/\.[^/.]+$/, '') || 'Audio Recording';
       const audioMarkdown = `\n\n![${alt}](${audioRef})\n\n`;
       
@@ -64,7 +65,70 @@ export function AudioRecorder({ onInsert, onClose, className }: AudioRecorderPro
 
   return (
     <div className={cn("flex items-center gap-1 sm:gap-2 bg-background border rounded-md px-2 py-1", className)}>
-      {!isRecording ? (
+      {isRecording ? (
+        <div className="flex items-center gap-1 sm:gap-2">
+          <div className="flex items-center gap-1">
+            <div
+              className={cn(
+                "h-2 w-2 rounded-full",
+                isRecording && !isPaused ? "bg-red-500 animate-pulse" : "bg-gray-400"
+              )}
+            />
+            <span className="text-xs sm:text-sm font-mono">
+              {formatDuration(duration)}
+            </span>
+          </div>
+
+          {isPaused ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={resumeRecording}
+              className="h-6 w-6 sm:h-7 sm:w-7 !p-0"
+              title="Resume"
+            >
+              <Play className="h-3 w-3 sm:h-4 sm:w-4" />
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={pauseRecording}
+              className="h-6 w-6 sm:h-7 sm:w-7 !p-0"
+              title="Pause"
+            >
+              <Pause className="h-3 w-3 sm:h-4 sm:w-4" />
+            </Button>
+          )}
+
+          <Button
+            type="button"
+            variant="default"
+            size="sm"
+            onClick={stopRecording}
+            className="h-6 w-6 sm:h-7 sm:w-7 !p-0 bg-red-500 hover:bg-red-600"
+            title="Stop & Save"
+          >
+            <Square className="h-3 w-3 sm:h-4 sm:w-4 fill-current" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              cancelRecording();
+              setHasStarted(false);
+              onClose?.();
+            }}
+            className="h-6 w-6 sm:h-7 sm:w-7 !p-0"
+            title="Cancel"
+          >
+            <X className="h-3 w-3 sm:h-4 sm:w-4" />
+          </Button>
+        </div>
+      ) : (
         <div className="flex items-center gap-1 sm:gap-2">
           <Button
             type="button"
@@ -97,70 +161,6 @@ export function AudioRecorder({ onInsert, onClose, className }: AudioRecorderPro
             <X className="h-3 w-3 sm:h-4 sm:w-4" />
           </Button>
         </div>
-      ) : (
-        <>
-          <div className="flex items-center gap-1 sm:gap-2">
-            <div className="flex items-center gap-1">
-              <div className={cn(
-                "h-2 w-2 rounded-full",
-                isRecording && !isPaused ? "bg-red-500 animate-pulse" : "bg-gray-400"
-              )} />
-              <span className="text-xs sm:text-sm font-mono">
-                {formatDuration(duration)}
-              </span>
-            </div>
-            
-            {isPaused ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={resumeRecording}
-                className="h-6 w-6 sm:h-7 sm:w-7 !p-0"
-                title="Resume"
-              >
-                <Play className="h-3 w-3 sm:h-4 sm:w-4" />
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={pauseRecording}
-                className="h-6 w-6 sm:h-7 sm:w-7 !p-0"
-                title="Pause"
-              >
-                <Pause className="h-3 w-3 sm:h-4 sm:w-4" />
-              </Button>
-            )}
-            
-            <Button
-              type="button"
-              variant="default"
-              size="sm"
-              onClick={stopRecording}
-              className="h-6 w-6 sm:h-7 sm:w-7 !p-0 bg-red-500 hover:bg-red-600"
-              title="Stop & Save"
-            >
-              <Square className="h-3 w-3 sm:h-4 sm:w-4 fill-current" />
-            </Button>
-            
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-            onClick={() => {
-              cancelRecording();
-              setHasStarted(false);
-              onClose?.();
-            }}
-              className="h-6 w-6 sm:h-7 sm:w-7 !p-0"
-              title="Cancel"
-            >
-              <X className="h-3 w-3 sm:h-4 sm:w-4" />
-            </Button>
-          </div>
-        </>
       )}
       
       {error && (

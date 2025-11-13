@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback, useImperativeHandle, forwardRef, useState } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { useImagePaste } from '@/hooks/useImagePaste';
-import { useImageStore, createImageReference } from '@/stores';
+import { useMediaStore, createMediaReference } from '@/stores';
 import { Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MarkdownToolbar } from './MarkdownToolbar';
@@ -36,7 +36,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lastSyncedValueRef = useRef<string>(value);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const { storeImage } = useImageStore();
+  const storeMedia = useMediaStore((state) => state.storeMedia);
   const [showAudioRecorder, setShowAudioRecorder] = useState(false);
   
   // Expose methods via ref
@@ -107,18 +107,19 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
     const currentValue = textarea.value;
     
     // Store image and get short reference ID
-    const imageId = storeImage(
-      image.data,
-      image.mimeType,
-      image.filename,
-      image.size,
-      image.width,
-      image.height
-    );
+    const imageId = storeMedia({
+      type: 'image',
+      data: image.data,
+      mimeType: image.mimeType,
+      filename: image.filename,
+      size: image.size,
+      width: image.width,
+      height: image.height,
+    });
     
     // Create markdown with short reference instead of full data URI
     const alt = image.filename || 'Image';
-    const imageReference = createImageReference(imageId);
+    const imageReference = createMediaReference(imageId);
     const imageMarkdown = `\n\n![${alt}](${imageReference})\n\n`;
     
     // Insert image at cursor position
@@ -140,7 +141,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
     
     // Also notify parent if callback provided
     onImagePaste?.(image);
-  }, [onChange, onImagePaste, storeImage]);
+  }, [onChange, onImagePaste, storeMedia]);
 
   const { handlePaste } = useImagePaste(handleImagePaste, {
     maxSize: 5 * 1024 * 1024, // 5MB
@@ -360,7 +361,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
         </div>
         {!showToolbar && (
           <p className="mt-2 text-xs text-muted-foreground flex-shrink-0 px-1">
-            <span className="hidden sm:inline">Supports Markdown syntax. Paste images directly or use the upload button. Images are stored with short references (image:abc123) for cleaner editing.</span>
+            <span className="hidden sm:inline">Supports Markdown syntax. Paste images directly or use the upload button. Media is stored with short references (media:abc123) for cleaner editing.</span>
             <span className="sm:hidden">Markdown supported. Paste images or upload.</span>
           </p>
         )}

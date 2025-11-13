@@ -220,21 +220,28 @@ function mergeData(local: ExportData, remote: ExportData): ExportData {
     }
   }
 
-  // Merge images - prefer newer
-  const imageMap = new Map<string, typeof local.images[number]>();
-  for (const img of [...(local.images || []), ...(remote.images || [])]) {
-    const existing = imageMap.get(img.id);
-    if (!existing || img.lastUsedAt > existing.lastUsedAt) {
-      imageMap.set(img.id, img);
-    }
+  // Merge media assets - prefer newer
+  const mediaMap = new Map<string, NonNullable<ExportData['media']>[number]>();
+  const aggregateMediaSources: Array<NonNullable<ExportData['media']>[number]> = [
+    ...(local.media || []),
+    ...(remote.media || []),
+  ];
+
+  if (aggregateMediaSources.length === 0) {
+    // Fallback for legacy exports
+    aggregateMediaSources.push(
+      ...((local.images || []) as any),
+      ...((remote.images || []) as any),
+      ...((local.audios || []) as any),
+      ...((remote.audios || []) as any)
+    );
   }
 
-  // Merge audios - prefer newer
-  const audioMap = new Map<string, NonNullable<ExportData['audios']>[number]>();
-  for (const audio of [...(local.audios || []), ...(remote.audios || [])]) {
-    const existing = audioMap.get(audio.id);
-    if (!existing || audio.lastUsedAt > existing.lastUsedAt) {
-      audioMap.set(audio.id, audio);
+  for (const asset of aggregateMediaSources) {
+    if (!asset || !asset.id) continue;
+    const existing = mediaMap.get(asset.id);
+    if (!existing || (asset.lastUsedAt || 0) > (existing.lastUsedAt || 0)) {
+      mediaMap.set(asset.id, asset);
     }
   }
 
@@ -277,8 +284,7 @@ function mergeData(local: ExportData, remote: ExportData): ExportData {
       tasks: Array.from(taskTemplateMap.values()),
       notes: Array.from(noteTemplateMap.values()),
     },
-    images: Array.from(imageMap.values()),
-    audios: Array.from(audioMap.values()),
+    media: Array.from(mediaMap.values()),
     noteHistories: noteHistories,
     metadata: {
       totalTasks: taskMap.size,
@@ -286,8 +292,7 @@ function mergeData(local: ExportData, remote: ExportData): ExportData {
       totalTemplates: taskTemplateMap.size + noteTemplateMap.size,
       totalNotes: noteMap.size,
       totalFolders: folderMap.size,
-      totalImages: imageMap.size,
-      totalAudios: audioMap.size,
+      totalMedia: mediaMap.size,
     },
   };
 }

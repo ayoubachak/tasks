@@ -2,8 +2,8 @@ import type { ExportData } from '@/lib/export/json';
 import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useTaskStore } from '@/stores/taskStore';
 import { useTemplateStore } from '@/stores/templateStore';
-import { useImageStore } from '@/stores/imageStore';
-import { useAudioStore } from '@/stores/audioStore';
+import { useMediaStore } from '@/stores/mediaStore';
+import type { StoredMedia, MediaType } from '@/stores/mediaStore';
 import { useNoteFolderStore } from '@/stores/noteFolderStore';
 import { useNoteHistoryStore } from '@/stores/noteHistoryStore';
 import { getAvailableStorage } from '@/lib/storage/storageUtils';
@@ -17,10 +17,218 @@ export interface ImportResult {
     workspaces: number;
     tasks: number;
     templates: number;
+    media: number;
     images: number;
     audios: number;
+    videos: number;
+    photos: number;
   };
   errors: string[];
+}
+
+type MediaStoreState = ReturnType<typeof useMediaStore.getState>;
+
+function collectMediaReferences(data: ExportData): Set<string> {
+  const refs = new Set<string>();
+  const mediaRefRegex = /media:([a-zA-Z0-9_-]+)/g;
+
+  const scanContent = (content?: string) => {
+    if (!content) return;
+    let match: RegExpExecArray | null;
+    while ((match = mediaRefRegex.exec(content)) !== null) {
+      refs.add(match[1]);
+    }
+  };
+
+  if (Array.isArray(data.tasks)) {
+    for (const task of data.tasks) {
+      scanContent(task.description);
+      if (Array.isArray(task.notes)) {
+        for (const note of task.notes) {
+          scanContent(note.content);
+        }
+      }
+    }
+  }
+
+  if (Array.isArray(data.standaloneNotes)) {
+    for (const note of data.standaloneNotes) {
+      scanContent(note.content);
+    }
+  }
+
+  return refs;
+}
+
+function cleanupMediaBeforeImport(mediaStore: MediaStoreState, data: ExportData): void {
+  try {
+    const usedMediaIds = collectMediaReferences(data);
+    mediaStore.cleanupUnusedMedia(usedMediaIds, 45);
+  } catch (error) {
+    console.warn('Media cleanup failed:', error);
+  }
+}
+
+function normalizeMediaAsset(
+  asset: Partial<StoredMedia>,
+  fallbackType: MediaType
+): StoredMedia | null {
+  if (!asset || !asset.data) {
+    return null;
+  }
+
+  const id = asset.id ?? nanoid();
+  const type = (asset.type ?? fallbackType) as MediaType;
+  const mimeType = asset.mimeType ?? guessMimeType(type);
+  const size = asset.size ?? estimateBase64Size(asset.data);
+  const filename = asset.filename ?? `${type}-${id}.${mimeType.split('/')[1] ?? 'bin'}`;
+  const createdAt = asset.createdAt ?? Date.now();
+  const legacyUpdatedAt =
+    typeof (asset as { updatedAt?: number }).updatedAt === 'number'
+      ? (asset as { updatedAt?: number }).updatedAt
+      : undefined;
+  const lastUsedAt = asset.lastUsedAt ?? legacyUpdatedAt ?? createdAt;
+
+  return {
+    id,
+    type,
+    data: asset.data,
+    mimeType,
+    filename,
+    size,
+    width: asset.width ?? (asset as any).metadata?.width,
+    height: asset.height ?? (asset as any).metadata?.height,
+    duration: asset.duration ?? (asset as any).metadata?.duration,
+    metadata: asset.metadata,
+    createdAt,
+    lastUsedAt,
+  };
+}
+
+function buildMediaListFromExport(data: ExportData) {
+  const deduped = new Map<string, StoredMedia>();
+
+  const push = (asset: any, fallbackType: MediaType) => {
+    const normalized = normalizeMediaAsset(asset, fallbackType);
+    if (!normalized) return;
+    const existing = deduped.get(normalized.id);
+    if (!existing || (normalized.lastUsedAt ?? 0) > (existing.lastUsedAt ?? 0)) {
+      deduped.set(normalized.id, normalized);
+    }
+  };
+
+  if (Array.isArray(data.media)) {
+    for (const mediaAsset of data.media) {
+      push(mediaAsset, (mediaAsset.type as any) ?? 'image');
+    }
+  }
+  if (Array.isArray(data.images)) {
+    for (const image of data.images) {
+      push(image, 'image');
+    }
+  }
+  if (Array.isArray(data.audios)) {
+    for (const audio of data.audios) {
+      push(audio, 'audio');
+    }
+  }
+
+  return Array.from(deduped.values());
+}
+
+function importMediaFromData(
+  data: ExportData,
+  result: ImportResult,
+  mediaStore: MediaStoreState
+): void {
+  const mediaAssets = buildMediaListFromExport(data);
+  if (mediaAssets.length === 0) {
+    return;
+  }
+
+  cleanupMediaBeforeImport(mediaStore, data);
+
+  const absoluteMaxSize = 5 * 1024 * 1024; // 5MB per asset safeguard
+
+  for (const asset of mediaAssets) {
+    try {
+      const assetSize = asset.size ?? estimateBase64Size(asset.data);
+      const currentAvailable = getAvailableStorage();
+
+      if (assetSize > currentAvailable * 0.9 && assetSize > absoluteMaxSize) {
+        result.errors.push(
+          `Skipped ${asset.filename}: too large (${(assetSize / 1024 / 1024).toFixed(2)}MB). ` +
+            `Available storage: ${(currentAvailable / 1024 / 1024).toFixed(2)}MB`
+        );
+        continue;
+      }
+
+      mediaStore.storeMedia({
+        ...asset,
+        id: asset.id,
+        createdAt: asset.createdAt,
+        lastUsedAt: asset.lastUsedAt,
+      });
+
+      result.imported.media += 1;
+      if (asset.type === 'audio') {
+        result.imported.audios += 1;
+      } else if (asset.type === 'video') {
+        result.imported.videos += 1;
+      } else if (asset.type === 'photo') {
+        result.imported.photos += 1;
+      } else {
+        result.imported.images += 1;
+      }
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+        try {
+          mediaStore.aggressiveCleanup(new Set<string>(), 7);
+          mediaStore.storeMedia({
+            ...asset,
+            id: asset.id,
+            createdAt: asset.createdAt,
+            lastUsedAt: asset.lastUsedAt,
+          });
+
+          result.imported.media += 1;
+          if (asset.type === 'audio') {
+            result.imported.audios += 1;
+          } else if (asset.type === 'video') {
+            result.imported.videos += 1;
+          } else if (asset.type === 'photo') {
+            result.imported.photos += 1;
+          } else {
+            result.imported.images += 1;
+          }
+        } catch (retryError) {
+          result.errors.push(
+            `Skipped ${asset.filename}: storage quota exceeded after cleanup. Please free up space or import without media.`
+          );
+        }
+      } else {
+        result.errors.push(`Failed to import ${asset.filename}: ${String(error)}`);
+      }
+    }
+  }
+}
+
+function guessMimeType(type: MediaType): string {
+  switch (type) {
+    case 'audio':
+      return 'audio/webm';
+    case 'video':
+      return 'video/webm';
+    case 'photo':
+      return 'image/jpeg';
+    default:
+      return 'image/png';
+  }
+}
+
+function estimateBase64Size(dataUri: string): number {
+  const base64 = dataUri.split(',')[1] ?? '';
+  return Math.ceil((base64.length * 3) / 4);
 }
 
 /**
@@ -43,8 +251,11 @@ export async function importFromJSONData(
       workspaces: 0,
       tasks: 0,
       templates: 0,
+      media: 0,
       images: 0,
       audios: 0,
+      videos: 0,
+      photos: 0,
     },
     errors: [],
   };
@@ -53,7 +264,7 @@ export async function importFromJSONData(
     const workspaceStore = useWorkspaceStore.getState();
     const taskStore = useTaskStore.getState();
     const templateStore = useTemplateStore.getState();
-    const imageStore = useImageStore.getState();
+    const mediaStore = useMediaStore.getState();
     const noteFolderStore = useNoteFolderStore.getState();
 
     // Import workspaces FIRST (before tasks)
@@ -127,140 +338,10 @@ export async function importFromJSONData(
       }
     }
 
-    // Import images (with size checking and cleanup)
-    if (data.images && Array.isArray(data.images)) {
-      // First, try to cleanup unused images to free up space
-      try {
-        const usedImageIds = new Set<string>();
-        
-        // Collect all image IDs used in tasks, notes, and descriptions
-        if (data.tasks) {
-          for (const task of data.tasks) {
-            // Check description for image references
-            if (task.description) {
-              const imageRefRegex = /image:([a-zA-Z0-9_-]+)/g;
-              let match;
-              while ((match = imageRefRegex.exec(task.description)) !== null) {
-                usedImageIds.add(match[1]);
-              }
-            }
-            
-            // Check notes for image references
-            if (Array.isArray(task.notes)) {
-              for (const note of task.notes) {
-                if (note.content) {
-                  const imageRefRegex = /image:([a-zA-Z0-9_-]+)/g;
-                  let match;
-                  while ((match = imageRefRegex.exec(note.content)) !== null) {
-                    usedImageIds.add(match[1]);
-                  }
-                }
-              }
-            }
-          }
-        }
-        
-        // Cleanup unused images (older than 30 days)
-        imageStore.cleanupUnusedImages(usedImageIds);
-      } catch (error) {
-        // If cleanup fails, continue anyway
-        console.warn('Image cleanup failed:', error);
-      }
+    // Import media assets (images, audio, video, photo)
+    importMediaFromData(data, result, mediaStore);
 
-      // Allow images up to 2MB even if storage is tight
-      const absoluteMaxSize = 2 * 1024 * 1024; // 2MB
-      
-      for (const image of data.images) {
-        try {
-          // Check if image size is reasonable
-          const imageSize = image.size || new Blob([image.data]).size;
-          
-          // Check available storage before storing
-          const currentAvailable = getAvailableStorage();
-          
-          // Only skip if image is larger than 90% of current available storage
-          // and larger than 2MB
-          if (imageSize > currentAvailable * 0.9 && imageSize > absoluteMaxSize) {
-            result.errors.push(
-              `Skipped image ${image.filename}: too large (${(imageSize / 1024 / 1024).toFixed(2)}MB). ` +
-              `Available storage: ${(currentAvailable / 1024 / 1024).toFixed(2)}MB`
-            );
-            continue;
-          }
-
-          // Try to store the image
-          imageStore.storeImage(
-            image.data,
-            image.mimeType,
-            image.filename,
-            imageSize,
-            image.width,
-            image.height
-          );
-          result.imported.images++;
-        } catch (error) {
-          if (error instanceof Error && error.name === 'QuotaExceededError') {
-            // Try cleanup one more time and retry
-            try {
-              imageStore.cleanupUnusedImages(new Set<string>()); // Clean all unused
-              
-              // Retry storing the image
-              const imageSize = image.size || new Blob([image.data]).size;
-              imageStore.storeImage(
-                image.data,
-                image.mimeType,
-                image.filename,
-                imageSize,
-                image.width,
-                image.height
-              );
-              result.imported.images++;
-            } catch (retryError) {
-              result.errors.push(
-                `Skipped image ${image.filename}: storage quota exceeded after cleanup. ` +
-                `Please free up space manually or import without images.`
-              );
-            }
-          } else {
-            result.errors.push(`Failed to import image ${image.filename}: ${error}`);
-          }
-        }
-      }
-    }
-
-    const audioCount = Array.isArray(data.audios) ? data.audios.length : 0;
-    if (audioCount > 0 && data.audios) {
-      try {
-        const audioMap: Record<string, (typeof data.audios)[number]> = {};
-        data.audios.forEach((audio) => {
-          audioMap[audio.id] = audio;
-        });
-
-        useAudioStore.setState({
-          audios: audioMap,
-        });
-
-        try {
-          const audioStorageKey = 'audio-storage';
-          const audioStorageData = {
-            state: { audios: audioMap },
-            version: 1,
-          };
-          localStorage.setItem(audioStorageKey, JSON.stringify(audioStorageData));
-          console.log(`Directly wrote ${data.audios.length} audios to localStorage`);
-        } catch (error) {
-          console.error('Failed to directly write audios to localStorage:', error);
-        }
-
-        result.imported.audios = audioCount;
-      } catch (error) {
-        result.errors.push(`Failed to import audio recordings: ${error}`);
-      }
-    } else {
-      result.imported.audios = 0;
-    }
-
-    // Import audios
+    // Import tasks AFTER workspaces (so workspace mapping is ready)
     // Import tasks AFTER workspaces (so workspace mapping is ready)
     if (data.tasks) {
       const existingTasks = taskStore.tasks;
@@ -475,20 +556,19 @@ export async function replaceAllDataWithBackup(data: ExportData): Promise<Import
     key === 'workspace-storage' ||
     key === 'task-storage' ||
     key === 'template-storage' ||
-    key === 'image-storage' ||
-    key === 'audio-storage' ||
+    key === 'media-storage' ||
     key === 'note-folder-storage' ||
     key === 'note-history-storage'
   );
   
-  coreDataKeys.forEach((key) => {
+  for (const key of coreDataKeys) {
     try {
       localStorage.removeItem(key);
       console.log(`Cleared localStorage key: ${key}`);
     } catch (error) {
       console.error(`Failed to clear ${key}:`, error);
     }
-  });
+  }
   
   // STEP 2: Reset all stores to empty state
   // This ensures Zustand's internal state matches localStorage
@@ -507,12 +587,8 @@ export async function replaceAllDataWithBackup(data: ExportData): Promise<Import
     noteTemplates: [],
   });
   
-  useImageStore.setState({
-    images: {},
-  });
-  
-  useAudioStore.setState({
-    audios: {},
+  useMediaStore.setState({
+    media: {},
   });
   
   useNoteFolderStore.setState({
@@ -531,8 +607,11 @@ export async function replaceAllDataWithBackup(data: ExportData): Promise<Import
       workspaces: 0,
       tasks: 0,
       templates: 0,
+      media: 0,
       images: 0,
       audios: 0,
+      videos: 0,
+      photos: 0,
     },
     errors: [],
   };
@@ -580,62 +659,57 @@ export async function replaceAllDataWithBackup(data: ExportData): Promise<Import
       console.log(`Imported ${taskTemplates.length} task templates and ${noteTemplates.length} note templates`);
     }
     
-    // Import images - CRITICAL: Must restore images properly
-    // The image store uses a custom storage handler, so we need to ensure it's written correctly
-    if (data.images && data.images.length > 0) {
-      const imagesMap: Record<string, typeof data.images[0]> = {};
-      data.images.forEach((img) => {
-        imagesMap[img.id] = img;
-      });
-      
-      // Set state - Zustand persist middleware will handle writing to localStorage
-      useImageStore.setState({
-        images: imagesMap,
-      });
-      
-      // Force immediate write to localStorage for images (bypassing custom handler temporarily)
-      // This ensures images are definitely saved even if the custom handler has issues
-      try {
-        const imageStorageKey = 'image-storage';
-        const imageStorageData = {
-          state: { images: imagesMap },
-          version: 1,
-        };
-        localStorage.setItem(imageStorageKey, JSON.stringify(imageStorageData));
-        console.log(`Directly wrote ${data.images.length} images to localStorage`);
-      } catch (error) {
-        console.error('Failed to directly write images to localStorage:', error);
-        // Continue anyway - Zustand persist should handle it
+    // Import media assets (images, audio, video, photo)
+    const mediaAssets = buildMediaListFromExport(data);
+    if (mediaAssets.length > 0) {
+      const mediaMap: Record<string, StoredMedia> = {};
+      let imageCount = 0;
+      let photoCount = 0;
+      let audioCount = 0;
+      let videoCount = 0;
+
+      for (const asset of mediaAssets) {
+        mediaMap[asset.id] = asset;
+        switch (asset.type) {
+          case 'audio':
+            audioCount += 1;
+            break;
+          case 'video':
+            videoCount += 1;
+            break;
+          case 'photo':
+            photoCount += 1;
+            break;
+          default:
+            imageCount += 1;
+            break;
+        }
       }
-      
-      result.imported.images = data.images.length;
-      console.log(`Imported ${data.images.length} images`);
-    }
 
-    if (data.audios && data.audios.length > 0) {
-      const audiosMap: Record<string, (typeof data.audios)[number]> = {};
-      data.audios.forEach((audio) => {
-        audiosMap[audio.id] = audio;
-      });
-
-      useAudioStore.setState({
-        audios: audiosMap,
+      useMediaStore.setState({
+        media: mediaMap,
       });
 
       try {
-        const audioStorageKey = 'audio-storage';
-        const audioStorageData = {
-          state: { audios: audiosMap },
+        const mediaStorageData = {
+          state: { media: mediaMap },
           version: 1,
         };
-        localStorage.setItem(audioStorageKey, JSON.stringify(audioStorageData));
-        console.log(`Directly wrote ${data.audios.length} audio recordings to localStorage`);
+        localStorage.setItem('media-storage', JSON.stringify(mediaStorageData));
+        console.log(`Directly wrote ${mediaAssets.length} media assets to localStorage`);
       } catch (error) {
-        console.error('Failed to directly write audios to localStorage:', error);
+        console.error('Failed to directly write media to localStorage:', error);
       }
 
-      result.imported.audios = data.audios.length;
-      console.log(`Imported ${data.audios.length} audio recordings`);
+      result.imported.media = mediaAssets.length;
+      result.imported.images = imageCount + photoCount;
+      result.imported.photos = photoCount;
+      result.imported.videos = videoCount;
+      result.imported.audios = audioCount;
+
+      console.log(
+        `Imported media → total: ${mediaAssets.length}, images: ${imageCount}, photos: ${photoCount}, videos: ${videoCount}, audios: ${audioCount}`
+      );
     }
     
     // Import note folders
@@ -662,8 +736,7 @@ export async function replaceAllDataWithBackup(data: ExportData): Promise<Import
     const verification = {
       workspaces: localStorage.getItem('workspace-storage') ? '✓' : '✗',
       tasks: localStorage.getItem('task-storage') ? '✓' : '✗',
-      images: localStorage.getItem('image-storage') ? '✓' : '✗',
-      audios: localStorage.getItem('audio-storage') ? '✓' : '✗',
+      media: localStorage.getItem('media-storage') ? '✓' : '✗',
       templates: localStorage.getItem('template-storage') ? '✓' : '✗',
       folders: localStorage.getItem('note-folder-storage') ? '✓' : '✗',
       histories: localStorage.getItem('note-history-storage') ? '✓' : '✗',

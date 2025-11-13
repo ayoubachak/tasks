@@ -148,7 +148,7 @@ export function BackupManager({ trigger }: BackupManagerProps) {
       if (result.success) {
         setRestoreResult({
           success: true,
-          message: `Restored ${result.imported.tasks} tasks, ${result.imported.workspaces} workspaces, ${result.imported.templates} templates, ${result.imported.images} images, and ${result.imported.audios} audio recordings`,
+          message: `Restored ${result.imported.tasks} tasks, ${result.imported.workspaces} workspaces, ${result.imported.templates} templates, and ${result.imported.media} media assets (images/photos: ${result.imported.images}, audio: ${result.imported.audios}, video: ${result.imported.videos})`,
         });
         setTimeout(() => {
           setOpen(false);

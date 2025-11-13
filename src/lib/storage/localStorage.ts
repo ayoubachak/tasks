@@ -1,16 +1,5 @@
 import { storageAdapter, type StorageAdapter } from './storageAdapter';
 
-const STORAGE_VERSION_KEY = 'app_version';
-const CURRENT_VERSION = '1.0.0';
-
-export interface StorageData {
-  version: string;
-  workspaces: unknown[];
-  tasks: unknown[];
-  tags: unknown[];
-  [key: string]: unknown;
-}
-
 export class LocalStorage {
   private adapter: StorageAdapter;
   private prefix: string;
@@ -67,29 +56,8 @@ export class LocalStorage {
     }
   }
 
-  getVersion(): string | null {
-    return this.adapter.getItem(this.getKey(STORAGE_VERSION_KEY));
-  }
-
-  setVersion(version: string): void {
-    this.adapter.setItem(this.getKey(STORAGE_VERSION_KEY), version);
-  }
-
   initialize(): void {
-    const currentVersion = this.getVersion();
-    if (!currentVersion) {
-      // First time setup
-      this.setVersion(CURRENT_VERSION);
-    } else if (currentVersion !== CURRENT_VERSION) {
-      // Version mismatch - trigger migration
-      this.migrate(currentVersion, CURRENT_VERSION);
-    }
-  }
-
-  private migrate(fromVersion: string, toVersion: string): void {
-    console.log(`Migrating from version ${fromVersion} to ${toVersion}`);
-    // Migration logic will be added as needed
-    this.setVersion(toVersion);
+    // No-op for now; legacy versioning has been removed.
   }
 
   // Get storage size estimate

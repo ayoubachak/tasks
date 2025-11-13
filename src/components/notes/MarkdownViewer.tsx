@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { useImageStore, useAudioStore } from '@/stores';
+import { useMediaStore } from '@/stores';
 import type { Components } from 'react-markdown';
 
 interface MarkdownViewerProps {
@@ -12,52 +12,71 @@ interface MarkdownViewerProps {
 }
 
 export function MarkdownViewer({ content, className }: MarkdownViewerProps) {
-  const { getImageData, updateLastUsed } = useImageStore();
-  const { getAudio, getAudioData, updateLastUsed: updateAudioLastUsed } = useAudioStore();
+  const getMedia = useMediaStore((state) => state.getMedia);
+  const getMediaData = useMediaStore((state) => state.getMediaData);
+  const updateLastUsed = useMediaStore((state) => state.updateLastUsed);
   
   // Process content: resolve image and audio references
-  const { processedContent, imageMap, imageIds, audioMap, audioIds } = useMemo(() => {
+  const { processedContent, imageMap, audioMap, videoMap, usedMediaIds } = useMemo(() => {
     const map = new Map<string, { src: string; alt: string }>();
-    const ids: string[] = [];
+    const audioMap = new Map<string, { src: string; title: string; mimeType?: string }>();
+    const videoMap = new Map<string, { src: string; title: string; mimeType?: string; poster?: string }>();
+    const usedIds = new Set<string>();
     let processed = content;
     let imageIndex = 0;
 
-    // First, handle image references (image:abc123) - resolve them to data URIs
-    const referenceRegex = /!\[([^\]]*)\]\((image:([^)]+))\)/g;
-    const referenceMatches: Array<{ full: string; alt: string; ref: string; id: string }> = [];
-    
-    let match;
-    while ((match = referenceRegex.exec(content)) !== null) {
-      const id = match[3];
-      const dataUri = getImageData(id);
-      if (dataUri) {
-        referenceMatches.push({
-          full: match[0],
-          alt: match[1] || 'Image',
-          ref: match[2],
-          id,
+    const referenceRegex = /!\[([^\]]*)\]\(((?:media|image|audio):([^)]+))\)/g;
+    processed = processed.replace(referenceRegex, (fullMatch, altText: string, ref: string, id: string) => {
+      const prefix = ref.split(':')[0];
+      const asset = getMedia(id);
+      const dataUri = getMediaData(id);
+      const assetType = asset?.type ?? (prefix === 'audio' ? 'audio' : 'image');
+      const fallbackTitle =
+        altText ||
+        asset?.filename ||
+        (assetType === 'audio'
+          ? 'Audio recording'
+          : assetType === 'video'
+          ? 'Video clip'
+          : 'Image');
+
+      if (!dataUri) {
+        return fullMatch;
+      }
+
+      usedIds.add(id);
+
+      if (assetType === 'audio') {
+        const placeholder = `AUDIO_PLACEHOLDER_${audioMap.size}`;
+        audioMap.set(placeholder, {
+          src: dataUri,
+          title: fallbackTitle,
+          mimeType: asset?.mimeType,
         });
-        ids.push(id); // Collect IDs to update later
+        return `![${fallbackTitle}](${placeholder})`;
       }
-    }
 
-    // Replace image references with placeholders (for react-markdown parsing)
-    for (let i = referenceMatches.length - 1; i >= 0; i--) {
-      const m = referenceMatches[i];
-      const dataUri = getImageData(m.id);
-      if (dataUri) {
-        const placeholder = `IMAGE_PLACEHOLDER_${imageIndex}`;
-        map.set(placeholder, { src: dataUri, alt: m.alt });
-        processed = processed.replace(m.full, `![${m.alt}](${placeholder})`);
-        imageIndex++;
+      if (assetType === 'video') {
+        const placeholder = `VIDEO_PLACEHOLDER_${videoMap.size}`;
+        videoMap.set(placeholder, {
+          src: dataUri,
+          title: fallbackTitle,
+          mimeType: asset?.mimeType,
+          poster: asset?.metadata?.poster,
+        });
+        return `![${fallbackTitle}](${placeholder})`;
       }
-    }
 
-    // Second, handle legacy data URIs (for backward compatibility)
-    // Extract long data URIs that react-markdown might truncate
+      const placeholder = `IMAGE_PLACEHOLDER_${imageIndex}`;
+      map.set(placeholder, { src: dataUri, alt: fallbackTitle });
+      imageIndex += 1;
+      return `![${fallbackTitle}](${placeholder})`;
+    });
+
+    // Handle legacy data URIs (for backward compatibility)
     const dataUriRegex = /!\[([^\]]*)\]\((data:[^)]+)\)/g;
     const dataUriMatches: Array<{ full: string; alt: string; src: string }> = [];
-    
+    let match: RegExpExecArray | null;
     while ((match = dataUriRegex.exec(processed)) !== null) {
       dataUriMatches.push({
         full: match[0],
@@ -66,49 +85,29 @@ export function MarkdownViewer({ content, className }: MarkdownViewerProps) {
       });
     }
 
-    // Replace legacy data URIs with placeholders
     for (let i = dataUriMatches.length - 1; i >= 0; i--) {
-      const m = dataUriMatches[i];
+      const { full, alt, src } = dataUriMatches[i];
       const placeholder = `IMAGE_PLACEHOLDER_${imageIndex}`;
-      map.set(placeholder, { src: m.src, alt: m.alt });
-      processed = processed.replace(m.full, `![${m.alt}](${placeholder})`);
-      imageIndex++;
+      map.set(placeholder, { src, alt });
+      processed = processed.replace(full, `![${alt}](${placeholder})`);
+      imageIndex += 1;
     }
 
-    const audioMap = new Map<string, { src: string; title: string; mimeType?: string }>();
-    const audioIds: string[] = [];
-    
-    const audioReferenceRegex = /!\[([^\]]*)\]\((audio:([^)]+))\)/g;
-    processed = processed.replace(audioReferenceRegex, (_, altText: string, ref: string, id: string) => {
-      const dataUri = getAudioData(id);
-      const audioMeta = getAudio(id);
-      if (!dataUri) {
-        return `![${altText}](audio:${id})`;
-      }
-
-      const placeholder = `AUDIO_PLACEHOLDER_${audioMap.size}`;
-      audioMap.set(placeholder, {
-        src: dataUri,
-        title: altText || audioMeta?.filename || 'Audio recording',
-        mimeType: audioMeta?.mimeType,
-      });
-      audioIds.push(id);
-      const displayTitle = altText || audioMeta?.filename || 'Audio recording';
-      return `![${displayTitle}](${placeholder})`;
-    });
-
-    return { processedContent: processed, imageMap: map, imageIds: ids, audioMap, audioIds };
-  }, [content, getImageData, getAudioData, getAudio]);
+    return {
+      processedContent: processed,
+      imageMap: map,
+      audioMap,
+      videoMap,
+      usedMediaIds: Array.from(usedIds),
+    };
+  }, [content, getMedia, getMediaData]);
 
   // Update last used timestamps after render (not during)
   useEffect(() => {
-    imageIds.forEach((id) => {
+    usedMediaIds.forEach((id) => {
       updateLastUsed(id);
     });
-    audioIds.forEach((id) => {
-      updateAudioLastUsed(id);
-    });
-  }, [imageIds, audioIds, updateLastUsed, updateAudioLastUsed]);
+  }, [usedMediaIds, updateLastUsed]);
 
   const components: Components = {
     code({ node, inline, className: codeClassName, children, ...props }) {
@@ -149,6 +148,33 @@ export function MarkdownViewer({ content, className }: MarkdownViewerProps) {
         return (
           <p className="my-4 text-sm text-muted-foreground">
             Audio file unavailable.
+          </p>
+        );
+      }
+
+      if (src && src.startsWith('VIDEO_PLACEHOLDER_')) {
+        const videoData = videoMap.get(src);
+        if (videoData) {
+          return (
+            <div className="my-4 space-y-1">
+              <video
+                controls
+                className="w-full max-w-xl rounded-lg border shadow-sm"
+                preload="metadata"
+                poster={videoData.poster}
+              >
+                <source src={videoData.src} type={videoData.mimeType ?? undefined} />
+                Your browser does not support the video element.
+              </video>
+              {videoData.title && (
+                <p className="text-xs text-muted-foreground">{videoData.title}</p>
+              )}
+            </div>
+          );
+        }
+        return (
+          <p className="my-4 text-sm text-muted-foreground">
+            Video file unavailable.
           </p>
         );
       }
