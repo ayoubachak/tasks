@@ -34,6 +34,23 @@ export function KeyboardShortcuts({
     }
   );
 
+  // Command Palette (Ctrl + /)
+  useKeyboardShortcut(
+    {
+      key: '/',
+      ctrl: true,
+      preventDefault: true,
+      stopPropagation: true,
+    },
+    (event) => {
+      if (enabled && onOpenCommandPalette) {
+        event.preventDefault();
+        event.stopPropagation();
+        onOpenCommandPalette();
+      }
+    }
+  );
+
   // New Task (Cmd/Ctrl + N)
   useKeyboardShortcut(
     {
@@ -134,6 +151,14 @@ export function KeyboardShortcuts({
       // Prevent browser defaults for our shortcuts
       // Cmd/Ctrl + K (Command Palette) - always prevent
       if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        return;
+      }
+      
+      // Ctrl + / (Command Palette) - always prevent
+      if (e.ctrlKey && (e.key === '/' || e.key === '?')) {
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();

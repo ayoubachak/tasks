@@ -12,7 +12,7 @@ Visit: [https://yourusername.github.io/tasks/](https://yourusername.github.io/ta
 - **Notes & Media** – Markdown editor/viewer, folders, inline images, audio recorder, unified `media:` references.
 - **Backups & Sync** – Google Drive integration via OAuth 2.0 PKCE (no client secret required).
 - **Performance UX** – virtualized lists, skeleton loaders, optimistic updates, toasts.
-- **Accessibility & Mobility** – focus management, keyboard shortcuts, command palette, responsive sheet/sidebar layouts.
+- **Accessibility & Mobility** – focus management, keyboard shortcuts, command palette with bulk operations (`Ctrl+/`), responsive sheet/sidebar layouts.
 
 ## UI Previews
 
@@ -38,6 +38,19 @@ npm run build:gh-pages
 ## Deployment
 
 See [GITHUB_PAGES_SETUP.md](./GITHUB_PAGES_SETUP.md) for deployment instructions.
+
+## Command Palette
+
+The Command Palette (`Ctrl+/` or `Ctrl+K`) allows you to create tasks and notes in bulk using a simple command syntax.
+
+**Quick Example:**
+```bash
+task "Review PR" status:in-progress priority:high tags:work,code
+task "Buy groceries" due:2024-12-25 priority:medium
+note "Meeting Notes" "Discussed project timeline..."
+```
+
+See [COMMAND_PALETTE.md](./COMMAND_PALETTE.md) for complete documentation, syntax reference, and examples.
 
 ## Google Sync Setup
 

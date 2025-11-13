@@ -11,11 +11,13 @@ This document explains how the Tasks & Notes application is organised today. It 
 - **UI kit**: shadcn/ui components + Tailwind classes + custom styles.
 - **Persistence**: browser localStorage for primary state; optional Google Drive backup for off-device recovery.
 - **Media handling**: `mediaStore` tracks all binary assets (images, audio, video) behind `media:` references that the Markdown editor/viewer can resolve.
+- **Command palette**: Advanced command execution engine for bulk task/note creation with full attribute support (accessible via `Ctrl+/` or `Ctrl+K`).
 
 ```
 User Interaction → React Components → Zustand actions/selectors
                  → Local stores (persist middleware) → Browser storage
                  → Optional Google Drive sync (via services/google/*)
+                 → Command Palette (bulk operations via command parser/executor)
 ```
 
 ---
@@ -126,11 +128,12 @@ src/
 │   ├── notes/           // MarkdownEditor, MarkdownViewer, toolbar, audio recorder
 │   ├── task/            // TaskList, TaskBoard, TaskEditor modals
 │   ├── import-export/   // Backup manager, import dialog
-│   ├── shared/          // Error boundaries, skeletons, buttons, etc.
+│   ├── shared/          // Error boundaries, skeletons, buttons, CommandPalette, etc.
 │   └── ui/              // shadcn wrappers
 ├── stores/              // Zustand stores (workspace, task, media, etc.)
 ├── hooks/               // Reusable hooks (image paste, debounce, command palette)
 ├── lib/
+│   ├── commands/        // Command parser & executor for bulk operations
 │   ├── export/          // Data collector, JSON exporter
 │   ├── import/          // JSON importer & helpers
 │   ├── markdown/        // Reference utilities (image -> media)
@@ -155,7 +158,43 @@ Static assets, mockups, and README screenshots live under `media/`.
 
 ---
 
-## 8. Known Gaps / Future Enhancements
+## 8. Command Palette & Bulk Operations
+
+The command palette (`Ctrl+/` or `Ctrl+K`) provides a powerful interface for bulk task and note creation:
+
+### Features
+- **Dual Mode**: Search mode for navigation and Command mode for bulk operations
+- **Workspace Context**: Always shows the active workspace clearly
+- **Multi-line Execution**: Paste and execute multiple commands at once
+- **Full Attribute Support**: All task attributes can be set via commands (status, priority, tags, dates, recurrence, etc.)
+- **Execution Results**: Detailed feedback showing what was created and any errors
+- **Command Syntax**:
+  - `task "Title" [options]` - Create a task with optional attributes
+  - `note "Title" "Content"` - Create a standalone note
+  - Simple task titles (without "task" prefix) are also supported
+
+### Command Options
+- `status`: todo|in-progress|blocked|done|archived
+- `priority`: none|low|medium|high|urgent
+- `tags`: comma-separated list
+- `labels`: comma-separated list
+- `due`: YYYY-MM-DD or YYYY-MM-DD HH:mm
+- `start`: YYYY-MM-DD or YYYY-MM-DD HH:mm
+- `reminder`: YYYY-MM-DD or YYYY-MM-DD HH:mm
+- `description`: "Description text"
+- `progress`: 0-100
+- `estimated`: minutes
+- `actual`: minutes
+- `recurrence`: pattern:interval[:endDate]
+
+### Implementation
+- **Parser** (`lib/commands/commandParser.ts`): Parses command strings into structured commands
+- **Executor** (`lib/commands/commandExecutor.ts`): Executes parsed commands and returns results
+- **UI** (`components/shared/CommandPalette.tsx`): Dual-mode interface with search and command execution
+
+---
+
+## 9. Known Gaps / Future Enhancements
 
 - Backend token broker for Google OAuth tokens to reduce exposure.
 - IndexedDB/OPFS store for large media collections.

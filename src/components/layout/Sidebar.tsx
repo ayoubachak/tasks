@@ -190,15 +190,15 @@ export function Sidebar({ collapsed = false, onToggleCollapse, mobileOpen = fals
               >
                 <CheckSquare className="h-4 w-4" />
               </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleCreateWorkspace}
-                title="Create workspace"
-                aria-label="Create new workspace"
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleCreateWorkspace}
+          title="Create workspace"
+          aria-label="Create new workspace"
+        >
+          <Plus className="h-4 w-4" />
+        </Button>
             </>
           )}
           {!collapsed && isSelectionMode && (
@@ -329,10 +329,10 @@ export function Sidebar({ collapsed = false, onToggleCollapse, mobileOpen = fals
                                   ? 'bg-primary text-primary-foreground'
                                   : 'hover:bg-accent'
                               )}
-                              aria-label={`Switch to ${workspace.name} workspace`}
-                              aria-pressed={activeWorkspaceId === workspace.id}
-                              role="tab"
-                            >
+                  aria-label={`Switch to ${workspace.name} workspace`}
+                  aria-pressed={activeWorkspaceId === workspace.id}
+                  role="tab"
+                >
                               <div
                                 className="h-4 w-4 rounded-full"
                                 style={{ backgroundColor: workspace.color }}
@@ -470,8 +470,8 @@ export function Sidebar({ collapsed = false, onToggleCollapse, mobileOpen = fals
                             role="tab"
                           >
                             <Folder className="h-4 w-4 flex-shrink-0" />
-                            <span className="flex-1 truncate">{workspace.name}</span>
-                          </button>
+                  <span className="flex-1 truncate">{workspace.name}</span>
+                </button>
                         )}
                       </div>
                       {!isSelectionMode && (
