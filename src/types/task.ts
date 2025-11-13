@@ -27,9 +27,22 @@ export interface ImageData {
   createdAt: number;
 }
 
+export interface NoteFolder {
+  id: string;
+  workspaceId: string;
+  parentFolderId?: string; // For nested folders
+  name: string;
+  color?: string; // Optional folder color
+  icon?: string; // Optional folder icon
+  order: number; // For sorting
+  createdAt: number;
+  updatedAt: number;
+}
+
 export interface Note {
   id: string;
   workspaceId: string; // Notes belong to a workspace, just like tasks
+  folderId?: string; // Optional - notes can be in a folder
   taskId?: string; // Optional - notes can be standalone or linked to a task
   title: string; // Note title (separate from task title)
   content: string; // Markdown

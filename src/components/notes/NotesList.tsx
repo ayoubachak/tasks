@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useTaskStore, useWorkspaceStore } from '@/stores';
+import { useTaskStore, useWorkspaceStore, useNoteFolderStore } from '@/stores';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card } from '@/components/ui/card';
@@ -9,7 +9,9 @@ import { DescriptionPreview } from '@/components/task/DescriptionPreview';
 import { MarkdownViewer } from './MarkdownViewer';
 import { NoteHistory } from './NoteHistory';
 import { InlineNoteEditor } from './InlineNoteEditor';
-import { Plus, FileText, Pin, History, Search, X, Trash2 } from 'lucide-react';
+import { FolderTree } from './FolderTree';
+import { FolderEditor } from './FolderEditor';
+import { Plus, FileText, Pin, History, Search, X, Trash2, Folder } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import type { Note } from '@/types';
@@ -23,19 +25,22 @@ interface NoteWithTask {
 
 export function NotesList() {
   const { getActiveWorkspace } = useWorkspaceStore();
-  const { getAllNotes, getTasksByWorkspace, deleteNote } = useTaskStore();
+  const { getNotesByFolder, getTasksByWorkspace, deleteNote, moveNoteToFolder } = useTaskStore();
+  const { getFolder } = useNoteFolderStore();
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedFolderId, setSelectedFolderId] = useState<string | undefined>(undefined);
   const [selectedNote, setSelectedNote] = useState<{ noteId: string; taskId?: string } | null>(null);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const [editingNote, setEditingNote] = useState<{ noteId: string | null; taskId?: string } | null>(null);
+  const [editingNote, setEditingNote] = useState<{ noteId: string | null; taskId?: string; folderId?: string } | null>(null);
+  const [folderEditor, setFolderEditor] = useState<{ folderId: string | null; parentFolderId?: string } | null>(null);
 
   const activeWorkspace = getActiveWorkspace();
   const allTasks = activeWorkspace ? getTasksByWorkspace(activeWorkspace.id) : [];
   
-  // Collect all notes (standalone + task notes) with their task info - only for current workspace
-  const allNotes: NoteWithTask[] = useMemo(() => {
+  // Get notes for selected folder
+  const folderNotes: NoteWithTask[] = useMemo(() => {
     if (!activeWorkspace) return [];
-    const notes = getAllNotes().filter((note) => note.workspaceId === activeWorkspace.id);
+    const notes = getNotesByFolder(selectedFolderId, activeWorkspace.id);
     const taskMap = new Map(allTasks.map((task) => [task.id, task]));
     
     return notes.map((note) => ({
@@ -44,20 +49,22 @@ export function NotesList() {
       taskTitle: note.taskId ? taskMap.get(note.taskId)?.title || 'Unknown Task' : 'Standalone',
       noteTitle: note.title || 'Untitled Note',
     }));
-  }, [getAllNotes, allTasks, activeWorkspace]);
+  }, [getNotesByFolder, selectedFolderId, allTasks, activeWorkspace]);
+
+  const selectedFolder = selectedFolderId ? getFolder(selectedFolderId) : null;
 
   // Filter notes by search query
   const filteredNotes = useMemo(() => {
-    if (!searchQuery.trim()) return allNotes;
+    if (!searchQuery.trim()) return folderNotes;
 
     const query = searchQuery.toLowerCase();
-    return allNotes.filter(({ note, taskTitle }) => {
+    return folderNotes.filter(({ note, taskTitle }) => {
       const contentMatch = note.content.toLowerCase().includes(query);
       const taskMatch = taskTitle.toLowerCase().includes(query);
       const tagMatch = note.tags.some((tag) => tag.toLowerCase().includes(query));
       return contentMatch || taskMatch || tagMatch;
     });
-  }, [allNotes, searchQuery]);
+  }, [folderNotes, searchQuery]);
 
   // Sort notes: pinned first, then by updated date
   const sortedNotes = useMemo(() => {
@@ -73,8 +80,16 @@ export function NotesList() {
   };
 
   const handleCreateNote = () => {
-    // Create a standalone note (no taskId)
-    setEditingNote({ noteId: null });
+    // Create a standalone note (no taskId), optionally in selected folder
+    setEditingNote({ noteId: null, folderId: selectedFolderId });
+  };
+
+  const handleCreateFolder = (parentFolderId?: string) => {
+    setFolderEditor({ folderId: null, parentFolderId });
+  };
+
+  const handleEditFolder = (folderId: string) => {
+    setFolderEditor({ folderId });
   };
 
   const handleEditorClose = () => {
@@ -92,6 +107,7 @@ export function NotesList() {
       <InlineNoteEditor
         taskId={editingNote.taskId}
         noteId={editingNote.noteId}
+        folderId={editingNote.folderId}
         onClose={handleEditorClose}
         onSave={handleEditorSave}
       />
@@ -99,21 +115,41 @@ export function NotesList() {
   }
 
   return (
-    <div className="flex h-full flex-col">
-      {/* Header */}
-      <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-bold">Notes</h2>
-          <p className="text-sm text-muted-foreground">
-            {sortedNotes.length} {sortedNotes.length === 1 ? 'note' : 'notes'}
-            {allNotes.length !== sortedNotes.length && ` (${allNotes.length} total)`}
-          </p>
-        </div>
-        <Button onClick={handleCreateNote} size="sm">
-          <Plus className="mr-2 h-4 w-4" />
-          New Note
-        </Button>
+    <div className="flex h-full gap-4">
+      {/* Folder Sidebar */}
+      <div className="w-64 flex-shrink-0">
+        <FolderTree
+          selectedFolderId={selectedFolderId}
+          onSelectFolder={setSelectedFolderId}
+          onCreateFolder={handleCreateFolder}
+          onEditFolder={handleEditFolder}
+        />
       </div>
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Header */}
+        <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold">
+              {selectedFolder ? (
+                <div className="flex items-center gap-2">
+                  <Folder className={cn('h-5 w-5', selectedFolder.color && `text-[${selectedFolder.color}]`)} style={selectedFolder.color ? { color: selectedFolder.color } : undefined} />
+                  {selectedFolder.name}
+                </div>
+              ) : (
+                'All Notes'
+              )}
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              {sortedNotes.length} {sortedNotes.length === 1 ? 'note' : 'notes'}
+            </p>
+          </div>
+          <Button onClick={handleCreateNote} size="sm">
+            <Plus className="mr-2 h-4 w-4" />
+            New Note
+          </Button>
+        </div>
 
       {/* Search */}
       <div className="mb-4">
@@ -240,6 +276,18 @@ export function NotesList() {
           }}
         />
       )}
+
+      {/* Folder Editor */}
+      {folderEditor && activeWorkspace && (
+        <FolderEditor
+          folderId={folderEditor.folderId}
+          workspaceId={activeWorkspace.id}
+          parentFolderId={folderEditor.parentFolderId}
+          open={!!folderEditor}
+          onClose={() => setFolderEditor(null)}
+        />
+      )}
+      </div>
     </div>
   );
 }

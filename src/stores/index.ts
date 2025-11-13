@@ -8,4 +8,5 @@ export * from './templateStore';
 export * from './selectionStore';
 export * from './backupStore';
 export * from './noteHistoryStore';
+export * from './noteFolderStore';
 

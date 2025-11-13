@@ -28,12 +28,14 @@ interface TaskState {
   toggleSubtask: (taskId: string, subtaskId: string) => void;
   calculateTaskProgress: (taskId: string) => number;
   // Note actions (can work with task notes or standalone notes)
-  addNote: (workspaceId: string, taskId: string | null, content: string, title?: string, images?: ImageData[]) => Note;
-  updateNote: (noteId: string, content: string, title?: string, taskId?: string) => void;
+  addNote: (workspaceId: string, taskId: string | null, content: string, title?: string, images?: ImageData[], folderId?: string) => Note;
+  updateNote: (noteId: string, content: string, title?: string, taskId?: string, folderId?: string) => void;
   deleteNote: (noteId: string, taskId?: string) => void;
   pinNote: (noteId: string, pinned: boolean, taskId?: string) => void;
   linkNoteToTask: (noteId: string, taskId: string) => void;
   unlinkNoteFromTask: (noteId: string, taskId: string) => void;
+  moveNoteToFolder: (noteId: string, folderId: string | undefined, taskId?: string) => void;
+  getNotesByFolder: (folderId: string | undefined, workspaceId: string) => Note[]; // Get notes in a folder (undefined = root)
   getAllNotes: () => Note[]; // Get all notes (standalone + task notes)
   getNotesByWorkspace: (workspaceId: string) => Note[]; // Get all notes in a workspace
   getNote: (noteId: string) => Note | undefined; // Find note in tasks or standalone
@@ -328,12 +330,13 @@ export const useTaskStore = create<TaskState>()(
         return calculateNestedProgress(tree);
       },
 
-      addNote: (workspaceId: string, taskId: string | null, content: string, title: string = 'Untitled Note', images: ImageData[] = []) => {
+      addNote: (workspaceId: string, taskId: string | null, content: string, title: string = 'Untitled Note', images: ImageData[] = [], folderId?: string) => {
         const now = Date.now();
         const note: Note = {
           id: nanoid(),
           workspaceId,
           ...(taskId && { taskId }),
+          ...(folderId && { folderId }),
           title,
           content,
           version: 1,
@@ -370,7 +373,7 @@ export const useTaskStore = create<TaskState>()(
         return note;
       },
 
-      updateNote: (noteId: string, content: string, title?: string, taskId?: string) => {
+      updateNote: (noteId: string, content: string, title?: string, taskId?: string, folderId?: string) => {
         set((state) => {
           // Try to find note in tasks first
           let foundNote: Note | undefined;
@@ -391,6 +394,7 @@ export const useTaskStore = create<TaskState>()(
                     ...n,
                     content,
                     ...(title !== undefined && { title }),
+                    ...(folderId !== undefined && { folderId }),
                     version: n.version + 1,
                     previousVersionId: n.id,
                     updatedAt: Date.now(),
@@ -432,6 +436,7 @@ export const useTaskStore = create<TaskState>()(
               ...note,
               content,
               ...(title !== undefined && { title }),
+              ...(folderId !== undefined && { folderId }),
               version: note.version + 1,
               previousVersionId: note.id,
               updatedAt: Date.now(),
@@ -612,6 +617,50 @@ export const useTaskStore = create<TaskState>()(
           }
 
           return state;
+        });
+      },
+
+      moveNoteToFolder: (noteId: string, folderId: string | undefined, taskId?: string) => {
+        set((state) => {
+          if (taskId) {
+            // Move note in task
+            return {
+              tasks: state.tasks.map((task) => {
+                if (task.id === taskId) {
+                  return {
+                    ...task,
+                    notes: task.notes.map((note) =>
+                      note.id === noteId
+                        ? { ...note, folderId, updatedAt: Date.now() }
+                        : note
+                    ),
+                    updatedAt: Date.now(),
+                  };
+                }
+                return task;
+              }),
+            };
+          } else {
+            // Move standalone note
+            return {
+              standaloneNotes: state.standaloneNotes.map((note) =>
+                note.id === noteId
+                  ? { ...note, folderId, updatedAt: Date.now() }
+                  : note
+              ),
+            };
+          }
+        });
+      },
+
+      getNotesByFolder: (folderId: string | undefined, workspaceId: string) => {
+        const allNotes = get().getNotesByWorkspace(workspaceId);
+        return allNotes.filter((note) => {
+          if (folderId === undefined) {
+            // Root folder: notes without folderId
+            return !note.folderId;
+          }
+          return note.folderId === folderId;
         });
       },
 

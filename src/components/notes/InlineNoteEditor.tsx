@@ -12,11 +12,12 @@ import { cn } from '@/lib/utils';
 interface InlineNoteEditorProps {
   taskId?: string; // Optional - for standalone notes
   noteId: string | null;
+  folderId?: string; // Optional - for folder assignment
   onClose: () => void;
   onSave?: () => void;
 }
 
-export function InlineNoteEditor({ taskId, noteId, onClose, onSave }: InlineNoteEditorProps) {
+export function InlineNoteEditor({ taskId, noteId, folderId, onClose, onSave }: InlineNoteEditorProps) {
   const { getTask, getNote, addNote, updateNote, deleteNote, pinNote } = useTaskStore();
   const { getActiveWorkspace } = useWorkspaceStore();
   
@@ -99,7 +100,9 @@ export function InlineNoteEditor({ taskId, noteId, onClose, onSave }: InlineNote
     // Allow empty notes - user might want to create a placeholder
     if (note) {
       // Update existing note (can be in task or standalone)
-      updateNote(note.id, currentContent, currentTitle, note.taskId);
+      // Preserve folderId if note already has one, or use provided folderId
+      const noteFolderId = note.folderId !== undefined ? note.folderId : folderId;
+      updateNote(note.id, currentContent, currentTitle, note.taskId, noteFolderId);
     } else {
       // Create new note (standalone if no taskId, or linked to task if taskId provided)
       // Get workspaceId from task if available, otherwise from active workspace
@@ -108,11 +111,11 @@ export function InlineNoteEditor({ taskId, noteId, onClose, onSave }: InlineNote
         console.error('Cannot create note: workspaceId is required');
         return;
       }
-      addNote(workspaceId, taskId || null, currentContent || '', currentTitle);
+      addNote(workspaceId, taskId || null, currentContent || '', currentTitle, [], folderId);
     }
     onSave?.();
     onClose();
-  }, [content, noteTitle, note, taskId, task, getTask, getActiveWorkspace, addNote, updateNote, onSave, onClose]);
+  }, [content, noteTitle, note, taskId, folderId, task, getTask, getActiveWorkspace, addNote, updateNote, onSave, onClose]);
 
   const handleDelete = useCallback(() => {
     if (note && confirm('Are you sure you want to delete this note?')) {
