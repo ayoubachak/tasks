@@ -61,17 +61,19 @@ export function GoogleSyncButton() {
 
   if (isConnected) {
     return (
-      <Button variant="outline" onClick={handleDisconnect}>
+      <Button variant="outline" onClick={handleDisconnect} className="w-full sm:w-auto">
         <CloudOff className="mr-2 h-4 w-4" />
-        Disconnect Google
+        <span className="hidden sm:inline">Disconnect Google</span>
+        <span className="sm:hidden">Disconnect</span>
       </Button>
     );
   }
 
   return (
-    <Button onClick={handleConnect}>
+    <Button onClick={handleConnect} className="w-full sm:w-auto">
       <Cloud className="mr-2 h-4 w-4" />
-      Connect Google Account
+      <span className="hidden sm:inline">Connect Google Account</span>
+      <span className="sm:hidden">Connect Google</span>
     </Button>
   );
 }

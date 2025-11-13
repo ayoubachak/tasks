@@ -205,17 +205,26 @@ export const useThemeStore = create<ThemeState>()(
       },
 
       addTheme: (theme: Theme) => {
-        set((state) => ({
-          themes: [...state.themes, theme],
-        }));
+        set((state) => {
+          // Ensure default themes are always included
+          const custom = state.themes.filter((t) => t.isCustom);
+          return {
+            themes: [...defaultThemes, ...custom, theme],
+          };
+        });
       },
 
       updateTheme: (themeId: string, updates: Partial<Theme>) => {
-        set((state) => ({
-          themes: state.themes.map((theme) =>
+        set((state) => {
+          // Always include default themes, only update custom ones
+          const custom = state.themes.filter((t) => t.isCustom);
+          const updatedCustom = custom.map((theme) =>
             theme.id === themeId ? { ...theme, ...updates } : theme
-          ),
-        }));
+          );
+          return {
+            themes: [...defaultThemes, ...updatedCustom],
+          };
+        });
         const theme = get().themes.find((t) => t.id === themeId);
         if (theme && themeId === get().currentTheme) {
           get().applyTheme({ ...theme, ...updates } as Theme);
@@ -223,14 +232,21 @@ export const useThemeStore = create<ThemeState>()(
       },
 
       deleteTheme: (themeId: string) => {
-        set((state) => ({
-          themes: state.themes.filter((theme) => theme.id !== themeId),
-          currentTheme: state.currentTheme === themeId ? 'dark' : state.currentTheme,
-        }));
+        set((state) => {
+          // Always include default themes, only delete custom ones
+          const custom = state.themes.filter((t) => t.isCustom && t.id !== themeId);
+          return {
+            themes: [...defaultThemes, ...custom],
+            currentTheme: state.currentTheme === themeId ? 'dark' : state.currentTheme,
+          };
+        });
       },
 
       getCurrentTheme: () => {
         const state = get();
+        if (!state.themes || !state.currentTheme) {
+          return defaultThemes.find((t) => t.id === 'dark');
+        }
         return state.themes.find((t) => t.id === state.currentTheme);
       },
 
@@ -282,14 +298,22 @@ export const useThemeStore = create<ThemeState>()(
       onRehydrateStorage: (state) => {
         // Merge custom themes with defaults after rehydration
         if (state) {
-          const customThemes = state.themes.filter((t) => t.isCustom);
+          // Ensure themes array exists and filter custom themes
+          const customThemes = (state.themes || []).filter((t) => t?.isCustom);
           state.themes = [...defaultThemes, ...customThemes];
           
-          // Apply theme after rehydration
-          const theme = state.getCurrentTheme();
-          if (theme) {
-            state.applyTheme(theme);
+          // Ensure currentTheme is set
+          if (!state.currentTheme) {
+            state.currentTheme = 'dark';
           }
+          
+          // Apply theme after rehydration (use setTimeout to ensure DOM is ready)
+          setTimeout(() => {
+            const theme = state.getCurrentTheme();
+            if (theme) {
+              state.applyTheme(theme);
+            }
+          }, 0);
         }
       },
     }
