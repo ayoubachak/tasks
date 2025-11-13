@@ -1,6 +1,7 @@
 export * from './workspaceStore';
 export * from './taskStore';
 export * from './imageStore';
+export * from './audioStore';
 export * from './uiStore';
 export * from './viewStore';
 export * from './shortcutStore';

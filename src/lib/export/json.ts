@@ -1,6 +1,7 @@
 import type { Task, Workspace, Note } from '@/types';
 import type { TaskTemplate, NoteTemplate } from '@/types/template';
 import type { StoredImage } from '@/stores/imageStore';
+import type { StoredAudio } from '@/stores/audioStore';
 import type { NoteFolder } from '@/types/task';
 
 export interface ExportData {
@@ -15,6 +16,7 @@ export interface ExportData {
     notes: NoteTemplate[];
   };
   images: StoredImage[];
+  audios?: StoredAudio[];
   noteHistories?: Record<string, Array<{
     noteId: string;
     version: number;
@@ -29,6 +31,7 @@ export interface ExportData {
     totalNotes?: number;
     totalFolders?: number;
     totalImages?: number;
+    totalAudios?: number;
   };
 }
 
@@ -48,6 +51,7 @@ export function exportToJSON(exportData: ExportData): string {
       totalNotes: exportData.standaloneNotes?.length,
       totalFolders: exportData.folders?.length,
       totalImages: exportData.images.length,
+      totalAudios: exportData.audios?.length,
     },
   };
 

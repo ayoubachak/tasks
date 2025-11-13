@@ -143,6 +143,7 @@ export function ImportDialog({ trigger }: ImportDialogProps) {
                       <li>{result.imported.tasks} tasks</li>
                       <li>{result.imported.templates} templates</li>
                       <li>{result.imported.images} images</li>
+                      <li>{result.imported.audios} audio recordings</li>
                     </ul>
                   </div>
                 ) : (

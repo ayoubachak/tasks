@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
 import {
   Bold,
   Italic,
@@ -16,6 +17,7 @@ import {
   Quote,
   Minus,
   Table,
+  Mic,
 } from 'lucide-react';
 import {
   Tooltip,
@@ -27,9 +29,11 @@ import {
 interface MarkdownToolbarProps {
   onInsert: (before: string, after: string, placeholder?: string) => void;
   onImageUpload: () => void;
+  onToggleAudio?: () => void;
+  audioActive?: boolean;
 }
 
-export function MarkdownToolbar({ onInsert, onImageUpload }: MarkdownToolbarProps) {
+export function MarkdownToolbar({ onInsert, onImageUpload, onToggleAudio, audioActive }: MarkdownToolbarProps) {
   const insertAtCursor = (before: string, after: string = '', placeholder?: string) => {
     onInsert(before, after, placeholder);
   };
@@ -39,13 +43,15 @@ export function MarkdownToolbar({ onInsert, onImageUpload }: MarkdownToolbarProp
     label, 
     onClick, 
     shortcut,
-    mobileHidden = false
+    mobileHidden = false,
+    className,
   }: { 
     icon: React.ComponentType<{ className?: string }>; 
     label: string; 
     onClick: () => void;
     shortcut?: string;
     mobileHidden?: boolean;
+    className?: string;
   }) => (
     <TooltipProvider>
       <Tooltip>
@@ -54,7 +60,11 @@ export function MarkdownToolbar({ onInsert, onImageUpload }: MarkdownToolbarProp
             type="button"
             variant="ghost"
             size="sm"
-            className={`h-4 w-4 sm:h-8 sm:w-8 !p-0 flex-shrink-0 ${mobileHidden ? 'hidden sm:inline-flex' : 'inline-flex'}`}
+            className={cn(
+              'h-4 w-4 sm:h-8 sm:w-8 !p-0 flex-shrink-0',
+              mobileHidden ? 'hidden sm:inline-flex' : 'inline-flex',
+              className
+            )}
             onClick={onClick}
           >
             <Icon className="h-2 w-2 sm:h-4 sm:w-4" />
@@ -144,6 +154,14 @@ export function MarkdownToolbar({ onInsert, onImageUpload }: MarkdownToolbarProp
         label="Image"
         onClick={onImageUpload}
       />
+      {onToggleAudio && (
+        <ToolbarButton
+          icon={Mic}
+          label="Record Audio"
+          onClick={onToggleAudio}
+          className={audioActive ? 'bg-primary text-primary-foreground hover:bg-primary/90' : undefined}
+        />
+      )}
       <ToolbarButton
         icon={Table}
         label="Table"

@@ -10,6 +10,7 @@ export const STORAGE_KEYS = {
   TASKS: 'task-storage',
   TEMPLATES: 'template-storage',
   IMAGES: 'image-storage',
+  AUDIOS: 'audio-storage',
   NOTE_FOLDERS: 'note-folder-storage',
   NOTE_HISTORIES: 'note-history-storage',
   

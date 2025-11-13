@@ -3,6 +3,7 @@ import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useTaskStore } from '@/stores/taskStore';
 import { useTemplateStore } from '@/stores/templateStore';
 import { useImageStore } from '@/stores/imageStore';
+import { useAudioStore } from '@/stores/audioStore';
 import { useNoteFolderStore } from '@/stores/noteFolderStore';
 import { useNoteHistoryStore } from '@/stores/noteHistoryStore';
 import { getAvailableStorage } from '@/lib/storage/storageUtils';
@@ -17,6 +18,7 @@ export interface ImportResult {
     tasks: number;
     templates: number;
     images: number;
+    audios: number;
   };
   errors: string[];
 }
@@ -42,6 +44,7 @@ export async function importFromJSONData(
       tasks: 0,
       templates: 0,
       images: 0,
+      audios: 0,
     },
     errors: [],
   };
@@ -128,7 +131,6 @@ export async function importFromJSONData(
     if (data.images && Array.isArray(data.images)) {
       // First, try to cleanup unused images to free up space
       try {
-        const allImageIds = imageStore.getAllImageIds();
         const usedImageIds = new Set<string>();
         
         // Collect all image IDs used in tasks, notes, and descriptions
@@ -165,12 +167,8 @@ export async function importFromJSONData(
         console.warn('Image cleanup failed:', error);
       }
 
-      const availableStorage = getAvailableStorage();
-      // Use up to 90% of available storage for images (more permissive)
-      const maxImageSize = availableStorage * 0.9;
       // Allow images up to 2MB even if storage is tight
       const absoluteMaxSize = 2 * 1024 * 1024; // 2MB
-      const effectiveMaxSize = Math.min(maxImageSize, absoluteMaxSize);
       
       for (const image of data.images) {
         try {
@@ -204,7 +202,6 @@ export async function importFromJSONData(
           if (error instanceof Error && error.name === 'QuotaExceededError') {
             // Try cleanup one more time and retry
             try {
-              const allImageIds = imageStore.getAllImageIds();
               imageStore.cleanupUnusedImages(new Set<string>()); // Clean all unused
               
               // Retry storing the image
@@ -231,6 +228,39 @@ export async function importFromJSONData(
       }
     }
 
+    const audioCount = Array.isArray(data.audios) ? data.audios.length : 0;
+    if (audioCount > 0 && data.audios) {
+      try {
+        const audioMap: Record<string, (typeof data.audios)[number]> = {};
+        data.audios.forEach((audio) => {
+          audioMap[audio.id] = audio;
+        });
+
+        useAudioStore.setState({
+          audios: audioMap,
+        });
+
+        try {
+          const audioStorageKey = 'audio-storage';
+          const audioStorageData = {
+            state: { audios: audioMap },
+            version: 1,
+          };
+          localStorage.setItem(audioStorageKey, JSON.stringify(audioStorageData));
+          console.log(`Directly wrote ${data.audios.length} audios to localStorage`);
+        } catch (error) {
+          console.error('Failed to directly write audios to localStorage:', error);
+        }
+
+        result.imported.audios = audioCount;
+      } catch (error) {
+        result.errors.push(`Failed to import audio recordings: ${error}`);
+      }
+    } else {
+      result.imported.audios = 0;
+    }
+
+    // Import audios
     // Import tasks AFTER workspaces (so workspace mapping is ready)
     if (data.tasks) {
       const existingTasks = taskStore.tasks;
@@ -446,6 +476,7 @@ export async function replaceAllDataWithBackup(data: ExportData): Promise<Import
     key === 'task-storage' ||
     key === 'template-storage' ||
     key === 'image-storage' ||
+    key === 'audio-storage' ||
     key === 'note-folder-storage' ||
     key === 'note-history-storage'
   );
@@ -480,6 +511,10 @@ export async function replaceAllDataWithBackup(data: ExportData): Promise<Import
     images: {},
   });
   
+  useAudioStore.setState({
+    audios: {},
+  });
+  
   useNoteFolderStore.setState({
     folders: [],
   });
@@ -497,6 +532,7 @@ export async function replaceAllDataWithBackup(data: ExportData): Promise<Import
       tasks: 0,
       templates: 0,
       images: 0,
+      audios: 0,
     },
     errors: [],
   };
@@ -575,6 +611,32 @@ export async function replaceAllDataWithBackup(data: ExportData): Promise<Import
       result.imported.images = data.images.length;
       console.log(`Imported ${data.images.length} images`);
     }
+
+    if (data.audios && data.audios.length > 0) {
+      const audiosMap: Record<string, (typeof data.audios)[number]> = {};
+      data.audios.forEach((audio) => {
+        audiosMap[audio.id] = audio;
+      });
+
+      useAudioStore.setState({
+        audios: audiosMap,
+      });
+
+      try {
+        const audioStorageKey = 'audio-storage';
+        const audioStorageData = {
+          state: { audios: audiosMap },
+          version: 1,
+        };
+        localStorage.setItem(audioStorageKey, JSON.stringify(audioStorageData));
+        console.log(`Directly wrote ${data.audios.length} audio recordings to localStorage`);
+      } catch (error) {
+        console.error('Failed to directly write audios to localStorage:', error);
+      }
+
+      result.imported.audios = data.audios.length;
+      console.log(`Imported ${data.audios.length} audio recordings`);
+    }
     
     // Import note folders
     if (data.folders && data.folders.length > 0) {
@@ -601,6 +663,7 @@ export async function replaceAllDataWithBackup(data: ExportData): Promise<Import
       workspaces: localStorage.getItem('workspace-storage') ? '✓' : '✗',
       tasks: localStorage.getItem('task-storage') ? '✓' : '✗',
       images: localStorage.getItem('image-storage') ? '✓' : '✗',
+      audios: localStorage.getItem('audio-storage') ? '✓' : '✗',
       templates: localStorage.getItem('template-storage') ? '✓' : '✗',
       folders: localStorage.getItem('note-folder-storage') ? '✓' : '✗',
       histories: localStorage.getItem('note-history-storage') ? '✓' : '✗',

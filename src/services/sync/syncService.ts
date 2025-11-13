@@ -99,7 +99,7 @@ export async function syncToDrive(
  * Sync data from Google Drive
  */
 export async function syncFromDrive(
-  options: SyncOptions = {}
+  _options: SyncOptions = {}
 ): Promise<{ success: boolean; data?: ExportData; error?: string }> {
   try {
     const accessToken = await getValidAccessToken();
@@ -187,47 +187,56 @@ export async function fullSync(
 function mergeData(local: ExportData, remote: ExportData): ExportData {
   // Merge workspaces - prefer newer
   const workspaceMap = new Map<string, typeof local.workspaces[0]>();
-  [...local.workspaces, ...remote.workspaces].forEach((ws) => {
+  for (const ws of [...local.workspaces, ...remote.workspaces]) {
     const existing = workspaceMap.get(ws.id);
     if (!existing || ws.updatedAt > existing.updatedAt) {
       workspaceMap.set(ws.id, ws);
     }
-  });
+  }
 
   // Merge tasks - prefer newer
   const taskMap = new Map<string, typeof local.tasks[0]>();
-  [...local.tasks, ...remote.tasks].forEach((task) => {
+  for (const task of [...local.tasks, ...remote.tasks]) {
     const existing = taskMap.get(task.id);
     if (!existing || task.updatedAt > existing.updatedAt) {
       taskMap.set(task.id, task);
     }
-  });
+  }
 
   // Merge templates
   const taskTemplateMap = new Map<string, typeof local.templates.tasks[0]>();
-  [...local.templates.tasks, ...remote.templates.tasks].forEach((t) => {
+  for (const t of [...local.templates.tasks, ...remote.templates.tasks]) {
     const existing = taskTemplateMap.get(t.id);
     if (!existing || (t.updatedAt || 0) > (existing.updatedAt || 0)) {
       taskTemplateMap.set(t.id, t);
     }
-  });
+  }
 
   const noteTemplateMap = new Map<string, typeof local.templates.notes[0]>();
-  [...local.templates.notes, ...remote.templates.notes].forEach((t) => {
+  for (const t of [...local.templates.notes, ...remote.templates.notes]) {
     const existing = noteTemplateMap.get(t.id);
     if (!existing || (t.updatedAt || 0) > (existing.updatedAt || 0)) {
       noteTemplateMap.set(t.id, t);
     }
-  });
+  }
 
   // Merge images - prefer newer
-  const imageMap = new Map<string, typeof local.images[0]>();
-  [...local.images, ...remote.images].forEach((img) => {
+  const imageMap = new Map<string, typeof local.images[number]>();
+  for (const img of [...(local.images || []), ...(remote.images || [])]) {
     const existing = imageMap.get(img.id);
     if (!existing || img.lastUsedAt > existing.lastUsedAt) {
       imageMap.set(img.id, img);
     }
-  });
+  }
+
+  // Merge audios - prefer newer
+  const audioMap = new Map<string, NonNullable<ExportData['audios']>[number]>();
+  for (const audio of [...(local.audios || []), ...(remote.audios || [])]) {
+    const existing = audioMap.get(audio.id);
+    if (!existing || audio.lastUsedAt > existing.lastUsedAt) {
+      audioMap.set(audio.id, audio);
+    }
+  }
 
   // Merge standalone notes - prefer newer
   const noteMap = new Map<string, Note>();
@@ -269,6 +278,7 @@ function mergeData(local: ExportData, remote: ExportData): ExportData {
       notes: Array.from(noteTemplateMap.values()),
     },
     images: Array.from(imageMap.values()),
+    audios: Array.from(audioMap.values()),
     noteHistories: noteHistories,
     metadata: {
       totalTasks: taskMap.size,
@@ -277,6 +287,7 @@ function mergeData(local: ExportData, remote: ExportData): ExportData {
       totalNotes: noteMap.size,
       totalFolders: folderMap.size,
       totalImages: imageMap.size,
+      totalAudios: audioMap.size,
     },
   };
 }

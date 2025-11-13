@@ -8,6 +8,7 @@ import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useTaskStore } from '@/stores/taskStore';
 import { useTemplateStore } from '@/stores/templateStore';
 import { useImageStore } from '@/stores/imageStore';
+import { useAudioStore } from '@/stores/audioStore';
 import { useNoteFolderStore } from '@/stores/noteFolderStore';
 import { useNoteHistoryStore } from '@/stores/noteHistoryStore';
 import type { ExportData } from './json';
@@ -22,6 +23,7 @@ export function collectAllData(): ExportData {
   const taskStore = useTaskStore.getState();
   const templateStore = useTemplateStore.getState();
   const imageStore = useImageStore.getState();
+  const audioStore = useAudioStore.getState();
   const noteFolderStore = useNoteFolderStore.getState();
   const noteHistoryStore = useNoteHistoryStore.getState();
 
@@ -30,6 +32,12 @@ export function collectAllData(): ExportData {
   const images = allImageIds
     .map((id) => imageStore.getImage(id))
     .filter((img): img is NonNullable<typeof img> => img !== undefined);
+
+  // Collect all audio
+  const allAudioIds = audioStore.getAllAudioIds();
+  const audios = allAudioIds
+    .map((id) => audioStore.getAudio(id))
+    .filter((audio): audio is NonNullable<typeof audio> => audio !== undefined);
 
   // Collect all notes (standalone + task notes)
   const allNotes = taskStore.getAllNotes();
@@ -46,6 +54,7 @@ export function collectAllData(): ExportData {
     standaloneNotes: allNotes.filter((n) => !n.taskId).length,
     folders: folders.length,
     images: images.length,
+    audios: audios.length,
     taskTemplates: templateStore.taskTemplates.length,
     noteTemplates: templateStore.noteTemplates.length,
     noteHistories: Object.keys(noteHistories).length,
@@ -64,6 +73,7 @@ export function collectAllData(): ExportData {
       notes: templateStore.noteTemplates,
     },
     images: images,
+    audios,
     noteHistories: noteHistories, // Include note version history
     metadata: {
       totalTasks: taskStore.tasks.length,
@@ -72,6 +82,7 @@ export function collectAllData(): ExportData {
       totalNotes: allNotes.length,
       totalFolders: folders.length,
       totalImages: images.length,
+      totalAudios: audios.length,
     },
   };
 

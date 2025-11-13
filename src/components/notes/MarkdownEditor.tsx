@@ -1,10 +1,11 @@
-import { useEffect, useRef, useCallback, useImperativeHandle, forwardRef } from 'react';
+import { useEffect, useRef, useCallback, useImperativeHandle, forwardRef, useState } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { useImagePaste } from '@/hooks/useImagePaste';
 import { useImageStore, createImageReference } from '@/stores';
 import { Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MarkdownToolbar } from './MarkdownToolbar';
+import { AudioRecorder } from './AudioRecorder';
 import type { PasteImageResult } from '@/hooks/useImagePaste';
 
 interface MarkdownEditorProps {
@@ -36,6 +37,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
   const lastSyncedValueRef = useRef<string>(value);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const { storeImage } = useImageStore();
+  const [showAudioRecorder, setShowAudioRecorder] = useState(false);
   
   // Expose methods via ref
   useImperativeHandle(ref, () => ({
@@ -239,13 +241,51 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
     document.getElementById('image-upload')?.click();
   };
 
+  const handleAudioInsert = (audioMarkdown: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    
+    const cursorPos = textarea.selectionStart;
+    const currentValue = textarea.value;
+    
+    // Insert audio markdown at cursor position
+    const before = currentValue.slice(0, cursorPos);
+    const after = currentValue.slice(cursorPos);
+    const newContent = before + audioMarkdown + after;
+    
+    // Update textarea directly (uncontrolled)
+    textarea.value = newContent;
+    lastSyncedValueRef.current = newContent;
+    
+    // Restore cursor position
+    const newPos = cursorPos + audioMarkdown.length;
+    textarea.setSelectionRange(newPos, newPos);
+    textarea.focus();
+    
+    // Sync to parent immediately for audio
+    onChange(newContent);
+    setShowAudioRecorder(false);
+  };
+
   return (
     <div className={`flex flex-col h-full ${className}`}>
       {showToolbar && (
-        <MarkdownToolbar
-          onInsert={handleToolbarInsert}
-          onImageUpload={handleToolbarImageUpload}
-        />
+        <>
+          <MarkdownToolbar
+            onInsert={handleToolbarInsert}
+            onImageUpload={handleToolbarImageUpload}
+            onToggleAudio={() => setShowAudioRecorder((prev) => !prev)}
+            audioActive={showAudioRecorder}
+          />
+          {showAudioRecorder && (
+            <div className="border-b bg-muted/30 p-1 sm:p-2">
+              <AudioRecorder
+                onInsert={handleAudioInsert}
+                onClose={() => setShowAudioRecorder(false)}
+              />
+            </div>
+          )}
+        </>
       )}
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
         {!showToolbar && (

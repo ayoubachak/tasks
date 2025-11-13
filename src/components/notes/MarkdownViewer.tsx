@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { useImageStore } from '@/stores';
+import { useImageStore, useAudioStore } from '@/stores';
 import type { Components } from 'react-markdown';
 
 interface MarkdownViewerProps {
@@ -13,9 +13,10 @@ interface MarkdownViewerProps {
 
 export function MarkdownViewer({ content, className }: MarkdownViewerProps) {
   const { getImageData, updateLastUsed } = useImageStore();
+  const { getAudio, getAudioData, updateLastUsed: updateAudioLastUsed } = useAudioStore();
   
-  // Process content: resolve image references and handle legacy data URIs
-  const { processedContent, imageMap, imageIds } = useMemo(() => {
+  // Process content: resolve image and audio references
+  const { processedContent, imageMap, imageIds, audioMap, audioIds } = useMemo(() => {
     const map = new Map<string, { src: string; alt: string }>();
     const ids: string[] = [];
     let processed = content;
@@ -74,15 +75,40 @@ export function MarkdownViewer({ content, className }: MarkdownViewerProps) {
       imageIndex++;
     }
 
-    return { processedContent: processed, imageMap: map, imageIds: ids };
-  }, [content, getImageData]);
+    const audioMap = new Map<string, { src: string; title: string; mimeType?: string }>();
+    const audioIds: string[] = [];
+    
+    const audioReferenceRegex = /!\[([^\]]*)\]\((audio:([^)]+))\)/g;
+    processed = processed.replace(audioReferenceRegex, (_, altText: string, ref: string, id: string) => {
+      const dataUri = getAudioData(id);
+      const audioMeta = getAudio(id);
+      if (!dataUri) {
+        return `![${altText}](audio:${id})`;
+      }
+
+      const placeholder = `AUDIO_PLACEHOLDER_${audioMap.size}`;
+      audioMap.set(placeholder, {
+        src: dataUri,
+        title: altText || audioMeta?.filename || 'Audio recording',
+        mimeType: audioMeta?.mimeType,
+      });
+      audioIds.push(id);
+      const displayTitle = altText || audioMeta?.filename || 'Audio recording';
+      return `![${displayTitle}](${placeholder})`;
+    });
+
+    return { processedContent: processed, imageMap: map, imageIds: ids, audioMap, audioIds };
+  }, [content, getImageData, getAudioData, getAudio]);
 
   // Update last used timestamps after render (not during)
   useEffect(() => {
     imageIds.forEach((id) => {
       updateLastUsed(id);
     });
-  }, [imageIds, updateLastUsed]);
+    audioIds.forEach((id) => {
+      updateAudioLastUsed(id);
+    });
+  }, [imageIds, audioIds, updateLastUsed, updateAudioLastUsed]);
 
   const components: Components = {
     code({ node, inline, className: codeClassName, children, ...props }) {
@@ -105,6 +131,28 @@ export function MarkdownViewer({ content, className }: MarkdownViewerProps) {
       );
     },
     img({ node, src, alt, ...props }) {
+      if (src && src.startsWith('AUDIO_PLACEHOLDER_')) {
+        const audioData = audioMap.get(src);
+        if (audioData) {
+          return (
+            <div className="my-4 space-y-1">
+              <audio controls className="w-full max-w-md" preload="metadata">
+                <source src={audioData.src} type={audioData.mimeType ?? undefined} />
+                Your browser does not support the audio element.
+              </audio>
+              {audioData.title && (
+                <p className="text-xs text-muted-foreground">{audioData.title}</p>
+              )}
+            </div>
+          );
+        }
+        return (
+          <p className="my-4 text-sm text-muted-foreground">
+            Audio file unavailable.
+          </p>
+        );
+      }
+
       // Check if this is a placeholder we created
       if (src && src.startsWith('IMAGE_PLACEHOLDER_')) {
         const imageData = imageMap.get(src);
@@ -178,6 +226,28 @@ export function MarkdownViewer({ content, className }: MarkdownViewerProps) {
       );
     },
     a({ node, href, children, ...props }) {
+      if (href && href.startsWith('AUDIO_PLACEHOLDER_')) {
+        const audioData = audioMap.get(href);
+        if (audioData) {
+          return (
+            <div className="my-4 space-y-1">
+              <audio controls className="w-full max-w-md" preload="metadata">
+                <source src={audioData.src} type={audioData.mimeType ?? undefined} />
+                Your browser does not support the audio element.
+              </audio>
+              {audioData.title && (
+                <p className="text-xs text-muted-foreground">{audioData.title}</p>
+              )}
+            </div>
+          );
+        }
+        return (
+          <p className="my-4 text-sm text-muted-foreground">
+            Audio file unavailable.
+          </p>
+        );
+      }
+
       return (
         <a
           href={href}
