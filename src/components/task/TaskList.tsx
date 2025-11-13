@@ -204,18 +204,20 @@ export function TaskList() {
       </div>
 
       {/* Toolbar */}
-      <div className="mb-4 space-y-3">
+      <div className="mb-3 md:mb-4 space-y-2 md:space-y-3 flex-shrink-0">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <SearchBar />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto pb-1 sm:pb-0">
             <ViewSwitcher />
-          <GroupByMenu />
+            <GroupByMenu />
             <SortMenu />
           </div>
         </div>
-        <FilterBar />
+        <div className="overflow-x-auto -mx-3 md:mx-0 px-3 md:px-0 pb-1">
+          <FilterBar />
+        </div>
       </div>
 
       <Separator className="mb-4" />

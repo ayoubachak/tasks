@@ -31,17 +31,19 @@ export function SortMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button type="button" variant="outline" size="sm">
-          <ArrowUpDown className="mr-2 h-4 w-4" />
-          Sort: {sortFields.find((f) => f.value === sortBy.field)?.label || 'Custom'}
+        <Button type="button" variant="outline" size="sm" className="text-xs sm:text-sm whitespace-nowrap">
+          <ArrowUpDown className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+          <span className="hidden sm:inline">Sort: </span>
+          <span className="sm:hidden">Sort</span>
+          <span className="hidden md:inline">: {sortFields.find((f) => f.value === sortBy.field)?.label || 'Custom'}</span>
           {sortBy.order === 'asc' ? (
-            <ArrowUp className="ml-2 h-3 w-3" />
+            <ArrowUp className="ml-1 sm:ml-2 h-3 w-3" />
           ) : (
-            <ArrowDown className="ml-2 h-3 w-3" />
+            <ArrowDown className="ml-1 sm:ml-2 h-3 w-3" />
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48">
+      <DropdownMenuContent align="end" className="w-48 max-w-[calc(100vw-2rem)]">
         <DropdownMenuLabel>Sort By</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {sortFields.map((field) => (

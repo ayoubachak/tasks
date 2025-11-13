@@ -69,16 +69,16 @@ export function NoteEditorView() {
 
   return (
     <Dialog open onOpenChange={handleClose}>
-      <DialogContent className="!max-w-[95vw] !w-[95vw] max-h-[95vh] h-[95vh] flex flex-col p-0 overflow-hidden">
-        <DialogHeader className="px-6 pt-6 pb-4 flex-shrink-0 border-b">
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <DialogTitle className="text-xl">{task.title}</DialogTitle>
-              <DialogDescription>
+      <DialogContent className="!max-w-[95vw] md:!max-w-[90vw] !w-[95vw] md:!w-[90vw] max-h-[95vh] h-[95vh] flex flex-col p-0 overflow-hidden max-md:inset-0 max-md:rounded-none max-md:max-w-full max-md:w-full max-md:h-full">
+        <DialogHeader className="px-2 sm:px-6 pt-2 sm:pt-6 pb-2 sm:pb-4 flex-shrink-0 border-b">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
+            <div className="min-w-0 flex-1">
+              <DialogTitle className="text-sm sm:text-xl truncate">{task.title}</DialogTitle>
+              <DialogDescription className="text-[10px] sm:text-sm hidden sm:block">
                 {note ? 'Edit Note' : 'New Note'} - Markdown supported
               </DialogDescription>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0 flex-wrap">
               {note && (
                 <>
                   <Button
@@ -86,35 +86,40 @@ export function NoteEditorView() {
                     size="sm"
                     onClick={() => setIsHistoryOpen(true)}
                     title="View history"
+                    className="h-8 w-8 sm:h-9 sm:w-auto sm:px-3"
                   >
-                    <History className="h-4 w-4" />
+                    <History className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="hidden sm:inline ml-2">History</span>
                   </Button>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={handlePin}
                     title={note.pinned ? 'Unpin note' : 'Pin note'}
+                    className="h-8 w-8 sm:h-9 sm:w-auto sm:px-3"
                   >
-                    <Pin className={`h-4 w-4 ${note.pinned ? 'fill-current' : ''}`} />
+                    <Pin className={`h-3 w-3 sm:h-4 sm:w-4 ${note.pinned ? 'fill-current' : ''}`} />
+                    <span className="hidden sm:inline ml-2">Pin</span>
                   </Button>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={handleDelete}
-                    className="text-destructive"
+                    className="text-destructive h-8 w-8 sm:h-9 sm:w-auto sm:px-3"
                     title="Delete note"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="hidden sm:inline ml-2">Delete</span>
                   </Button>
                 </>
               )}
-              <Button variant="outline" size="sm" onClick={handleClose}>
-                <X className="mr-2 h-4 w-4" />
-                Cancel
+              <Button variant="outline" size="sm" onClick={handleClose} className="text-xs sm:text-sm">
+                <X className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Cancel</span>
               </Button>
-              <Button size="sm" onClick={handleSave}>
-                <Save className="mr-2 h-4 w-4" />
-                {note ? 'Update' : 'Create'} Note
+              <Button size="sm" onClick={handleSave} className="text-xs sm:text-sm">
+                <Save className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                {note ? 'Update' : 'Create'}
               </Button>
             </div>
           </div>
@@ -126,13 +131,13 @@ export function NoteEditorView() {
             onValueChange={(v) => setViewMode(v as typeof viewMode)} 
             className="flex flex-col flex-1 min-h-0"
           >
-            <TabsList className="flex-shrink-0 w-full justify-start px-6 py-4 h-auto min-h-[2.5rem]">
-              <TabsTrigger value="edit">Edit</TabsTrigger>
-              <TabsTrigger value="preview">Preview</TabsTrigger>
-              <TabsTrigger value="split">Split</TabsTrigger>
+            <TabsList className="flex-shrink-0 w-full justify-start px-2 sm:px-6 py-1 sm:py-4 h-auto min-h-[1.75rem] sm:min-h-[2.5rem]">
+              <TabsTrigger value="edit" className="text-[11px] sm:text-sm px-2 sm:px-4 py-0.5 sm:py-2 h-6 sm:h-9">Edit</TabsTrigger>
+              <TabsTrigger value="preview" className="text-[11px] sm:text-sm px-2 sm:px-4 py-0.5 sm:py-2 h-6 sm:h-9">Preview</TabsTrigger>
+              <TabsTrigger value="split" className="text-[11px] sm:text-sm px-2 sm:px-4 py-0.5 sm:py-2 h-6 sm:h-9 hidden sm:inline-flex">Split</TabsTrigger>
             </TabsList>
 
-            <div className="flex-1 overflow-hidden p-6 min-h-0">
+            <div className="flex-1 overflow-hidden p-2 sm:p-6 min-h-0">
               {viewMode === 'edit' && (
                 <div className="h-full flex flex-col min-h-0 overflow-hidden">
                   <MarkdownEditor
@@ -146,13 +151,13 @@ export function NoteEditorView() {
               )}
 
               {viewMode === 'preview' && (
-                <div className="h-full overflow-y-auto rounded-md border p-6 bg-background">
+                <div className="h-full overflow-y-auto rounded-md border p-3 sm:p-6 bg-background">
                   <MarkdownViewer content={content || '*No note content yet*'} />
                 </div>
               )}
 
               {viewMode === 'split' && (
-                <div className="grid h-full grid-cols-2 gap-6 min-h-0 overflow-hidden">
+                <div className="grid h-full grid-cols-1 md:grid-cols-2 gap-3 md:gap-6 min-h-0 overflow-hidden">
                   <div className="h-full flex flex-col min-h-0 overflow-hidden">
                     <MarkdownEditor
                       value={content}
@@ -162,7 +167,7 @@ export function NoteEditorView() {
                       showToolbar
                     />
                   </div>
-                  <div className="h-full overflow-y-auto rounded-md border p-6 bg-background">
+                  <div className="h-full overflow-y-auto rounded-md border p-3 sm:p-6 bg-background">
                     <MarkdownViewer content={content || '*No note content yet*'} />
                   </div>
                 </div>

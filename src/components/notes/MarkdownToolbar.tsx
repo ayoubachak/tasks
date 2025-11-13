@@ -3,16 +3,19 @@ import { Separator } from '@/components/ui/separator';
 import {
   Bold,
   Italic,
+  Strikethrough,
   Heading1,
   Heading2,
   Heading3,
   List,
   ListOrdered,
+  CheckSquare,
   Link,
   Image as ImageIcon,
   Code,
   Quote,
   Minus,
+  Table,
 } from 'lucide-react';
 import {
   Tooltip,
@@ -35,12 +38,14 @@ export function MarkdownToolbar({ onInsert, onImageUpload }: MarkdownToolbarProp
     icon: Icon, 
     label, 
     onClick, 
-    shortcut 
+    shortcut,
+    mobileHidden = false
   }: { 
     icon: React.ComponentType<{ className?: string }>; 
     label: string; 
     onClick: () => void;
     shortcut?: string;
+    mobileHidden?: boolean;
   }) => (
     <TooltipProvider>
       <Tooltip>
@@ -49,21 +54,21 @@ export function MarkdownToolbar({ onInsert, onImageUpload }: MarkdownToolbarProp
             type="button"
             variant="ghost"
             size="sm"
-            className="h-8 w-8 p-0"
+            className={`h-4 w-4 sm:h-8 sm:w-8 !p-0 flex-shrink-0 ${mobileHidden ? 'hidden sm:inline-flex' : 'inline-flex'}`}
             onClick={onClick}
           >
-            <Icon className="h-4 w-4" />
+            <Icon className="h-2 w-2 sm:h-4 sm:w-4" />
           </Button>
         </TooltipTrigger>
         <TooltipContent>
-          <p>{label} {shortcut && <span className="text-xs text-muted-foreground">({shortcut})</span>}</p>
+          <p className="text-xs sm:text-sm">{label} {shortcut && <span className="text-xs text-muted-foreground">({shortcut})</span>}</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
   );
 
   return (
-    <div className="flex items-center gap-1 border-b bg-muted/50 p-2 flex-wrap">
+    <div className="flex items-center gap-0.5 sm:gap-1 border-b bg-muted/50 !p-0 sm:p-2 flex-wrap min-h-[1.75rem] sm:min-h-[2.5rem]">
       <ToolbarButton
         icon={Bold}
         label="Bold"
@@ -76,7 +81,12 @@ export function MarkdownToolbar({ onInsert, onImageUpload }: MarkdownToolbarProp
         shortcut="Ctrl+I"
         onClick={() => insertAtCursor('*', '*', 'italic text')}
       />
-      <Separator orientation="vertical" className="h-6" />
+      <ToolbarButton
+        icon={Strikethrough}
+        label="Strikethrough"
+        onClick={() => insertAtCursor('~~', '~~', 'strikethrough text')}
+      />
+      <Separator orientation="vertical" className="h-2.5 sm:h-6 flex-shrink-0" />
       <ToolbarButton
         icon={Heading1}
         label="Heading 1"
@@ -92,7 +102,7 @@ export function MarkdownToolbar({ onInsert, onImageUpload }: MarkdownToolbarProp
         label="Heading 3"
         onClick={() => insertAtCursor('### ', '', 'Heading 3')}
       />
-      <Separator orientation="vertical" className="h-6" />
+      <Separator orientation="vertical" className="h-2.5 sm:h-6 flex-shrink-0" />
       <ToolbarButton
         icon={List}
         label="Bullet List"
@@ -104,11 +114,16 @@ export function MarkdownToolbar({ onInsert, onImageUpload }: MarkdownToolbarProp
         onClick={() => insertAtCursor('1. ', '', 'List item')}
       />
       <ToolbarButton
+        icon={CheckSquare}
+        label="Task List"
+        onClick={() => insertAtCursor('- [ ] ', '', 'Task item')}
+      />
+      <ToolbarButton
         icon={Quote}
         label="Quote"
         onClick={() => insertAtCursor('> ', '', 'Quote')}
       />
-      <Separator orientation="vertical" className="h-6" />
+      <Separator orientation="vertical" className="h-2.5 sm:h-6 flex-shrink-0" />
       <ToolbarButton
         icon={Link}
         label="Link"
@@ -116,15 +131,25 @@ export function MarkdownToolbar({ onInsert, onImageUpload }: MarkdownToolbarProp
       />
       <ToolbarButton
         icon={Code}
-        label="Code"
+        label="Inline Code"
         onClick={() => insertAtCursor('`', '`', 'code')}
+      />
+      <ToolbarButton
+        icon={Code}
+        label="Code Block"
+        onClick={() => insertAtCursor('```\n', '\n```', 'code')}
       />
       <ToolbarButton
         icon={ImageIcon}
         label="Image"
         onClick={onImageUpload}
       />
-      <Separator orientation="vertical" className="h-6" />
+      <ToolbarButton
+        icon={Table}
+        label="Table"
+        onClick={() => insertAtCursor('\n| Header 1 | Header 2 |\n|----------|----------|\n| Cell 1   | Cell 2   |\n', '', '')}
+      />
+      <Separator orientation="vertical" className="h-2.5 sm:h-6 flex-shrink-0" />
       <ToolbarButton
         icon={Minus}
         label="Horizontal Rule"

@@ -249,10 +249,11 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
       )}
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
         {!showToolbar && (
-          <div className="mb-2 flex items-center justify-between flex-shrink-0">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <ImageIcon className="h-4 w-4" />
-              <span>Paste images or click to upload</span>
+          <div className="mb-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 flex-shrink-0">
+            <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
+              <ImageIcon className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Paste images or click to upload</span>
+              <span className="sm:hidden">Paste or upload images</span>
             </div>
             <div>
               <input
@@ -267,9 +268,11 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
                 variant="outline"
                 size="sm"
                 onClick={() => document.getElementById('image-upload')?.click()}
+                className="text-xs sm:text-sm"
               >
-                <ImageIcon className="mr-2 h-4 w-4" />
-                Upload Image
+                <ImageIcon className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Upload Image</span>
+                <span className="sm:hidden">Upload</span>
               </Button>
             </div>
           </div>
@@ -283,7 +286,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
             id="image-upload"
           />
         )}
-        <div className="flex-1 min-h-0 flex flex-col border rounded-md bg-background overflow-hidden" style={{ height: 0 }}>
+        <div className="flex-1 min-h-0 flex flex-col border rounded-md bg-background overflow-hidden">
           <Textarea
             ref={textareaRef}
             defaultValue={value}
@@ -304,7 +307,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
             }}
             placeholder={placeholder}
             rows={rows}
-            className="prose prose-lg dark:prose-invert max-w-none w-full resize-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none rounded-md text-base leading-relaxed"
+            className="prose prose-sm sm:prose-base md:prose-lg dark:prose-invert max-w-none w-full resize-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none rounded-md text-sm sm:text-base leading-relaxed p-3 sm:p-4"
             style={{ 
               height: '100%',
               minHeight: 0,
@@ -316,8 +319,9 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
           />
         </div>
         {!showToolbar && (
-          <p className="mt-2 text-xs text-muted-foreground flex-shrink-0">
-            Supports Markdown syntax. Paste images directly or use the upload button. Images are stored with short references (image:abc123) for cleaner editing.
+          <p className="mt-2 text-xs text-muted-foreground flex-shrink-0 px-1">
+            <span className="hidden sm:inline">Supports Markdown syntax. Paste images directly or use the upload button. Images are stored with short references (image:abc123) for cleaner editing.</span>
+            <span className="sm:hidden">Markdown supported. Paste images or upload.</span>
           </p>
         )}
       </div>

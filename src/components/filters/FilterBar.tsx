@@ -29,14 +29,14 @@ export function FilterBar() {
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <div className="flex items-center gap-2">
-        <Filter className="h-4 w-4 text-muted-foreground" />
-        <span className="text-sm font-medium">Filters:</span>
+    <div className="flex flex-wrap items-center gap-2 min-w-0">
+      <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+        <Filter className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+        <span className="text-xs sm:text-sm font-medium whitespace-nowrap">Filters:</span>
       </div>
 
       {/* Quick Filters */}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-1 sm:gap-2">
         {quickFilters.map((quickFilter) => (
           <Button
             key={quickFilter.id}
@@ -44,7 +44,7 @@ export function FilterBar() {
             variant="outline"
             size="sm"
             onClick={() => handleQuickFilter(quickFilter)}
-            className="h-7 text-xs"
+            className="h-7 text-xs whitespace-nowrap"
           >
             {quickFilter.label}
           </Button>
@@ -94,7 +94,7 @@ export function FilterBar() {
             Custom Filter
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-80" align="start">
+        <PopoverContent className="w-80 max-w-[calc(100vw-2rem)]" align="start">
           <FilterBuilder onClose={() => setIsBuilderOpen(false)} />
         </PopoverContent>
       </Popover>

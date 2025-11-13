@@ -133,21 +133,21 @@ export function InlineNoteEditor({ taskId, noteId, folderId, onClose, onSave }: 
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex-shrink-0 border-b px-6 py-4">
-        <div className="flex items-center justify-between">
+      <div className="flex-shrink-0 border-b px-2 sm:px-6 py-2 sm:py-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
           <div className="flex-1 min-w-0">
             <Input
               value={noteTitle}
               onChange={(e) => setNoteTitle(e.target.value)}
-              className="text-2xl font-semibold h-auto py-2 px-0 border-0 border-b-2 border-transparent hover:border-border focus-visible:border-primary focus-visible:ring-0 focus-visible:ring-offset-0 rounded-none bg-transparent transition-colors"
+              className="text-sm sm:text-2xl font-semibold h-auto py-1 sm:py-2 px-0 border-0 border-b-2 border-transparent hover:border-border focus-visible:border-primary focus-visible:ring-0 focus-visible:ring-offset-0 rounded-none bg-transparent transition-colors"
               placeholder="Note title..."
             />
-            <p className="text-sm text-muted-foreground mt-2">
+            <p className="text-[10px] sm:text-sm text-muted-foreground mt-1 sm:mt-2 hidden sm:block">
               {note ? 'Edit Note' : 'New Note'} - Markdown supported
-              {task && ` (Linked to: ${task.title})`}
+              {task && <span className="hidden sm:inline"> (Linked to: {task.title})</span>}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
             {note && (
               <>
                 <Button
@@ -155,35 +155,40 @@ export function InlineNoteEditor({ taskId, noteId, folderId, onClose, onSave }: 
                   size="sm"
                   onClick={() => setIsHistoryOpen(true)}
                   title="View history"
+                  className="h-8 w-8 sm:h-9 sm:w-auto sm:px-3"
                 >
-                  <History className="h-4 w-4" />
+                  <History className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="hidden sm:inline ml-2">History</span>
                 </Button>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handlePin}
                   title={note.pinned ? 'Unpin note' : 'Pin note'}
+                  className="h-8 w-8 sm:h-9 sm:w-auto sm:px-3"
                 >
-                  <Pin className={cn("h-4 w-4", note.pinned && "fill-current")} />
+                  <Pin className={cn("h-3 w-3 sm:h-4 sm:w-4", note.pinned && "fill-current")} />
+                  <span className="hidden sm:inline ml-2">Pin</span>
                 </Button>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handleDelete}
-                  className="text-destructive"
+                  className="text-destructive h-8 w-8 sm:h-9 sm:w-auto sm:px-3"
                   title="Delete note"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="hidden sm:inline ml-2">Delete</span>
                 </Button>
               </>
             )}
-            <Button variant="outline" size="sm" onClick={onClose}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back
+            <Button variant="outline" size="sm" onClick={onClose} className="text-xs sm:text-sm">
+              <ArrowLeft className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Back</span>
             </Button>
-            <Button size="sm" onClick={handleSave}>
-              <Save className="mr-2 h-4 w-4" />
-              {note ? 'Update' : 'Create'} Note
+            <Button size="sm" onClick={handleSave} className="text-xs sm:text-sm">
+              <Save className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+              {note ? 'Update' : 'Create'}
             </Button>
           </div>
         </div>
@@ -196,15 +201,15 @@ export function InlineNoteEditor({ taskId, noteId, folderId, onClose, onSave }: 
           onValueChange={(v) => setViewMode(v as typeof viewMode)} 
           className="flex flex-col flex-1 min-h-0"
         >
-          <TabsList className="flex-shrink-0 w-full justify-start px-6 py-4 h-auto min-h-[2.5rem] border-b">
-            <TabsTrigger value="edit">Edit</TabsTrigger>
-            <TabsTrigger value="preview">Preview</TabsTrigger>
-            <TabsTrigger value="split">Split</TabsTrigger>
+          <TabsList className="flex-shrink-0 w-full justify-start px-2 sm:px-6 py-1 sm:py-4 h-auto min-h-[1.75rem] sm:min-h-[2.5rem] border-b">
+            <TabsTrigger value="edit" className="text-[11px] sm:text-sm px-2 sm:px-4 py-0.5 sm:py-2 h-6 sm:h-9">Edit</TabsTrigger>
+            <TabsTrigger value="preview" className="text-[11px] sm:text-sm px-2 sm:px-4 py-0.5 sm:py-2 h-6 sm:h-9">Preview</TabsTrigger>
+            <TabsTrigger value="split" className="text-[11px] sm:text-sm px-2 sm:px-4 py-0.5 sm:py-2 h-6 sm:h-9 hidden sm:inline-flex">Split</TabsTrigger>
           </TabsList>
 
-          <div className="flex-1 overflow-hidden p-6 min-h-0" style={{ height: '100%' }}>
+          <div className="flex-1 overflow-hidden p-2 sm:p-6 min-h-0">
             {viewMode === 'edit' && (
-              <div className="h-full flex flex-col min-h-0" style={{ height: '100%', maxHeight: '100%' }}>
+              <div className="h-full flex flex-col min-h-0">
                 <MarkdownEditor
                   ref={editorRef}
                   value={content}
@@ -228,7 +233,7 @@ export function InlineNoteEditor({ taskId, noteId, folderId, onClose, onSave }: 
             )}
 
             {viewMode === 'preview' && (
-              <div className="h-full overflow-y-auto rounded-md border p-6 bg-background relative">
+              <div className="h-full overflow-y-auto rounded-md border p-3 sm:p-6 bg-background relative">
                 {isPreviewUpdating && (
                   <div className="absolute top-2 right-2 text-xs text-muted-foreground flex items-center gap-1">
                     <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
@@ -240,8 +245,8 @@ export function InlineNoteEditor({ taskId, noteId, folderId, onClose, onSave }: 
             )}
 
             {viewMode === 'split' && (
-              <div className="grid h-full grid-cols-2 gap-6 min-h-0 overflow-hidden" style={{ height: '100%', maxHeight: '100%' }}>
-                <div className="h-full flex flex-col min-h-0" style={{ height: '100%', maxHeight: '100%' }}>
+              <div className="grid h-full grid-cols-1 md:grid-cols-2 gap-3 md:gap-6 min-h-0 overflow-hidden">
+                <div className="h-full flex flex-col min-h-0">
                   <MarkdownEditor
                     ref={editorRef}
                     value={content}
@@ -262,7 +267,7 @@ export function InlineNoteEditor({ taskId, noteId, folderId, onClose, onSave }: 
                     showToolbar
                   />
                 </div>
-                <div className="h-full overflow-y-auto rounded-md border p-6 bg-background relative">
+                <div className="h-full overflow-y-auto rounded-md border p-3 sm:p-6 bg-background relative">
                   {isPreviewUpdating && (
                     <div className="absolute top-2 right-2 text-xs text-muted-foreground flex items-center gap-1 z-10">
                       <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />

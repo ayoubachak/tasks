@@ -24,12 +24,14 @@ export function GroupByMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button type="button" variant="outline" size="sm">
-          <Group className="mr-2 h-4 w-4" />
-          Group: {groupByOptions.find((g) => g.value === groupBy)?.label || 'None'}
+        <Button type="button" variant="outline" size="sm" className="text-xs sm:text-sm whitespace-nowrap">
+          <Group className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+          <span className="hidden sm:inline">Group: </span>
+          <span className="sm:hidden">Group</span>
+          <span className="hidden md:inline">: {groupByOptions.find((g) => g.value === groupBy)?.label || 'None'}</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48">
+      <DropdownMenuContent align="end" className="w-48 max-w-[calc(100vw-2rem)]">
         <DropdownMenuLabel>Group By</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {groupByOptions.map((option) => (
