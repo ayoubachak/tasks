@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import { TaskItem } from '@/components/task/TaskItem';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
@@ -134,8 +133,8 @@ export function GroupedListView({ tasks, groupBy, sortBy, onEditTask }: GroupedL
   });
 
   return (
-    <ScrollArea className="flex-1">
-      <div className="space-y-2">
+    <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden -mx-3 md:mx-0 px-3 md:px-0">
+      <div className="space-y-2 py-2">
         {groupEntries.map(([groupKey, groupTasks]) => (
           <Accordion
             key={groupKey}
@@ -166,7 +165,7 @@ export function GroupedListView({ tasks, groupBy, sortBy, onEditTask }: GroupedL
           </Accordion>
         ))}
       </div>
-    </ScrollArea>
+    </div>
   );
 }
 
