@@ -8,6 +8,7 @@ import { KeyboardShortcuts } from './components/shared/KeyboardShortcuts';
 import { CommandPalette } from './components/shared/CommandPalette';
 import { ErrorBoundary } from './components/shared/ErrorBoundary';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
+import { Toaster } from './components/ui/toaster';
 import { storage } from './lib/storage/localStorage';
 import { useWorkspaceStore, useUIStore, useSyncStore } from './stores';
 import { exchangeCodeForTokens } from './services/google/auth';
@@ -103,6 +104,7 @@ function App() {
           <NoteEditorView />
         </ErrorBoundary>
       )}
+      <Toaster />
     </ErrorBoundary>
   );
 }

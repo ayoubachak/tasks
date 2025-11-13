@@ -4,6 +4,7 @@ import { syncFromDrive } from '@/services/sync/syncService';
 import { replaceAllDataWithBackup } from '@/lib/import/json';
 import { Button } from '@/components/ui/button';
 import { Download, Loader2 } from 'lucide-react';
+import { toast } from '@/lib/toast';
 import type { ExportData } from '@/lib/export/json';
 import { format } from 'date-fns';
 
@@ -20,7 +21,7 @@ export function PullButton() {
       const backupResult = await syncFromDrive();
       
       if (!backupResult.success || !backupResult.data) {
-        alert('No backup found on Google Drive.\n\nYou can create a backup by clicking "Sync Now".');
+        toast.info('No backup found', 'You can create a backup by clicking "Sync Now"');
         setIsPulling(false);
         return;
       }
@@ -48,12 +49,18 @@ export function PullButton() {
         return;
       }
 
-      // Load the backup
-      await replaceAllDataWithBackup(backupData);
-      alert('Backup loaded successfully!');
+      // Load the backup with toast promise
+      await toast.promise(
+        replaceAllDataWithBackup(backupData),
+        {
+          loading: 'Loading backup...',
+          success: 'Backup loaded successfully',
+          error: (error) => `Failed to load backup: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        }
+      );
     } catch (error) {
       console.error('Failed to pull backup:', error);
-      alert('Failed to load backup: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      toast.error('Failed to load backup', error instanceof Error ? error.message : 'Unknown error');
     } finally {
       setIsPulling(false);
     }

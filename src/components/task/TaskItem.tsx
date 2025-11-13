@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { formatTime } from '@/lib/utils/timeFormat';
+import { toast } from '@/lib/toast';
 import type { Task } from '@/types';
 
 interface TaskItemProps {
@@ -25,20 +26,41 @@ export function TaskItem({ task, onEdit }: TaskItemProps) {
 
   const handleToggle = () => {
     toggleTaskStatus(task.id);
+    const newStatus = task.status === 'done' ? 'todo' : 'done';
+    if (newStatus === 'done') {
+      toast.success('Task completed', task.title);
+    }
   };
 
   const handleDelete = () => {
-    if (confirm('Are you sure you want to delete this task?')) {
-      deleteTask(task.id);
-    }
+    // Use toast with promise for better UX
+    toast.promise(
+      new Promise<void>((resolve, reject) => {
+        // Show confirmation dialog
+        const confirmed = window.confirm('Are you sure you want to delete this task?');
+        if (confirmed) {
+          deleteTask(task.id);
+          resolve();
+        } else {
+          reject(new Error('Cancelled'));
+        }
+      }),
+      {
+        loading: 'Deleting task...',
+        success: 'Task deleted',
+        error: 'Deletion cancelled',
+      }
+    );
   };
 
   const handleArchive = () => {
     updateTask(task.id, { status: 'archived' });
+    toast.success('Task archived', task.title);
   };
 
   const handleUnarchive = () => {
     updateTask(task.id, { status: 'todo' });
+    toast.success('Task unarchived', task.title);
   };
 
   const priorityColors: Record<string, string> = {

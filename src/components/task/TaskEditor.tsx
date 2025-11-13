@@ -26,6 +26,7 @@ import { Plus, FileText, Calendar as CalendarIcon, ExternalLink, Repeat, ListChe
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { formatTime, parseTime, formatTimeForInput } from '@/lib/utils/timeFormat';
+import { toast } from '@/lib/toast';
 import { nanoid } from 'nanoid';
 import type { TaskStatus, Priority, RecurrenceRule, Subtask, Checklist, ChecklistItem, Note } from '@/types';
 
@@ -231,6 +232,9 @@ export function TaskEditor({ taskId, workspaceId, onClose }: TaskEditorProps) {
     // Reset draft tracking since we're saving
     draftCreatedRef.current = false;
     setDraftTaskId(null);
+    
+    // Show success toast
+    toast.success(taskId ? 'Task updated' : 'Task created', finalTitle);
     
     // Close the dialog by calling handleClose, which will see isSavingRef and skip deletion
     handleClose(false);

@@ -4,6 +4,7 @@ import { fullSync } from '@/services/sync/syncService';
 import { collectAllData } from '@/lib/export/dataCollector';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, Loader2 } from 'lucide-react';
+import { toast } from '@/lib/toast';
 import { cn } from '@/lib/utils';
 
 export function SyncButton() {
@@ -25,6 +26,8 @@ export function SyncButton() {
     setSyncStatus('syncing');
     setLastSyncError(null);
 
+    const toastId = toast.loading('Syncing with Google Drive...');
+
     try {
       // Collect ALL data from all stores using centralized function
       const exportData = collectAllData();
@@ -37,17 +40,25 @@ export function SyncButton() {
       if (result.success) {
         setSyncStatus('success');
         setLastSyncAt(Date.now());
+        toast.dismiss(toastId);
+        toast.success('Sync completed', 'Your data has been synced with Google Drive');
         
         // If we downloaded data, we should reload it
         // For now, we'll just mark as synced
         // In a full implementation, we'd import the merged data
       } else {
         setSyncStatus('error');
-        setLastSyncError(result.error || 'Sync failed');
+        const errorMsg = result.error || 'Sync failed';
+        setLastSyncError(errorMsg);
+        toast.dismiss(toastId);
+        toast.error('Sync failed', errorMsg);
       }
     } catch (error) {
       setSyncStatus('error');
-      setLastSyncError(error instanceof Error ? error.message : 'Unknown error');
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      setLastSyncError(errorMsg);
+      toast.dismiss(toastId);
+      toast.error('Sync failed', errorMsg);
     } finally {
       setIsSyncing(false);
     }

@@ -19,6 +19,8 @@ import { SortableListView } from '@/components/views/SortableListView';
 import { GroupedListView } from '@/components/views/GroupedListView';
 import { StatsDashboard } from '@/components/analytics/StatsDashboard';
 import { BulkActionsBar } from '@/components/bulk/BulkActionsBar';
+import { VirtualizedTaskList } from './VirtualizedTaskList';
+import { ListSkeleton } from '@/components/shared/Skeleton';
 
 export function TaskList() {
   const { getActiveWorkspace } = useWorkspaceStore();
@@ -129,6 +131,9 @@ export function TaskList() {
           return <SortableListView tasks={filteredTasks} onEditTask={handleEditTask} />;
         }
         // Use regular list when filters/search are active (preserves sort order)
+        // Use virtualized list for 50+ tasks for better performance
+        const useVirtualization = filteredTasks.length >= 50;
+        
         return (
           <ScrollArea className="flex-1">
             {filteredTasks.length === 0 ? (
@@ -144,8 +149,14 @@ export function TaskList() {
                   </p>
                 </div>
               </div>
+            ) : useVirtualization ? (
+              <VirtualizedTaskList
+                tasks={filteredTasks}
+                onEdit={handleEditTask}
+                className="h-full"
+              />
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-2 p-4">
                 {filteredTasks.map((task) => (
                   <TaskItem
                     key={task.id}

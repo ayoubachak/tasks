@@ -14,6 +14,7 @@ import { FolderEditor } from './FolderEditor';
 import { Plus, FileText, Pin, History, Search, X, Trash2, Folder } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { toast } from '@/lib/toast';
 import type { Note } from '@/types';
 
 interface NoteWithTask {
@@ -248,8 +249,19 @@ export function NotesList() {
                       className="h-8 w-8 text-destructive hover:text-destructive"
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (confirm('Are you sure you want to delete this note?')) {
-                          deleteNote(note.id, taskId || undefined);
+                        // Use toast for confirmation
+                        const confirmed = window.confirm('Are you sure you want to delete this note?');
+                        if (confirmed) {
+                          toast.promise(
+                            Promise.resolve().then(() => {
+                              deleteNote(note.id, taskId || undefined);
+                            }),
+                            {
+                              loading: 'Deleting note...',
+                              success: 'Note deleted',
+                              error: 'Failed to delete note',
+                            }
+                          );
                         }
                       }}
                       title="Delete note"
