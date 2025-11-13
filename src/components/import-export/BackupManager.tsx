@@ -84,15 +84,7 @@ export function BackupManager({ trigger }: BackupManagerProps) {
         );
 
         if (confirmed) {
-          const jsonData = exportToJSON(
-            exportData.workspaces,
-            exportData.tasks,
-            exportData.templates.tasks,
-            exportData.templates.notes,
-            exportData.images,
-            exportData.standaloneNotes,
-            exportData.folders
-          );
+          const jsonData = exportToJSON(exportData);
           downloadJSON(jsonData, `backup-${backupName}-${new Date().toISOString().split('T')[0]}.json`);
           setBackupName('');
           setBackupDescription('');
@@ -109,15 +101,7 @@ export function BackupManager({ trigger }: BackupManagerProps) {
       if (backup) {
         if (!backup.storedLocally) {
           // Backup created but not stored, download it
-          const jsonData = exportToJSON(
-            exportData.workspaces,
-            exportData.tasks,
-            exportData.templates.tasks,
-            exportData.templates.notes,
-            exportData.images,
-            exportData.standaloneNotes,
-            exportData.folders
-          );
+          const jsonData = exportToJSON(exportData);
           downloadJSON(jsonData, `backup-${backupName}-${new Date().toISOString().split('T')[0]}.json`);
           alert('Backup is too large to store locally. It has been downloaded to your computer.');
         }

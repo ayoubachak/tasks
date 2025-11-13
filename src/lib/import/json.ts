@@ -6,6 +6,7 @@ import { useImageStore } from '@/stores/imageStore';
 import { useNoteFolderStore } from '@/stores/noteFolderStore';
 import { useNoteHistoryStore } from '@/stores/noteHistoryStore';
 import { getAvailableStorage } from '@/lib/storage/storageUtils';
+import { getAllStorageKeys } from '@/lib/storage/storageRegistry';
 import { nanoid } from 'nanoid';
 import type { Task } from '@/types';
 
@@ -20,6 +21,12 @@ export interface ImportResult {
   errors: string[];
 }
 
+/**
+ * Import data with merge/skip options
+ * Use this for importing data and merging with existing data
+ * 
+ * For complete replacement (wipe and restore), use replaceAllDataWithBackup() instead
+ */
 export async function importFromJSONData(
   data: ExportData,
   options: {
@@ -429,18 +436,21 @@ export async function importFromJSONData(
 export async function replaceAllDataWithBackup(data: ExportData): Promise<ImportResult> {
   console.log('Starting complete data replacement...');
   
-  // STEP 1: Directly clear ALL localStorage keys
+  // STEP 1: Directly clear ALL localStorage keys using storage registry
   // This is more reliable than using delete methods which might have side effects
-  const STORAGE_KEYS = [
-    'workspace-storage',
-    'task-storage',
-    'template-storage',
-    'image-storage',
-    'note-folder-storage',
-    'note-history-storage',
-  ];
+  const storageKeys = getAllStorageKeys();
   
-  STORAGE_KEYS.forEach((key) => {
+  // Only clear core data stores (preserve UI state like views, sync, backups)
+  const coreDataKeys = storageKeys.filter((key) => 
+    key === 'workspace-storage' ||
+    key === 'task-storage' ||
+    key === 'template-storage' ||
+    key === 'image-storage' ||
+    key === 'note-folder-storage' ||
+    key === 'note-history-storage'
+  );
+  
+  coreDataKeys.forEach((key) => {
     try {
       localStorage.removeItem(key);
       console.log(`Cleared localStorage key: ${key}`);

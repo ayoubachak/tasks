@@ -59,15 +59,7 @@ export function ExportDialog({ trigger }: ExportDialogProps) {
 
       switch (format) {
         case 'json': {
-          data = exportToJSON(
-            filteredData.workspaces,
-            filteredData.tasks,
-            filteredData.templates.tasks,
-            filteredData.templates.notes,
-            filteredData.images,
-            filteredData.standaloneNotes,
-            filteredData.folders
-          );
+          data = exportToJSON(filteredData);
           filename = `tasks-export-${new Date().toISOString().split('T')[0]}.json`;
           downloadFn = downloadJSON;
           break;

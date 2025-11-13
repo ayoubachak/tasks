@@ -6,6 +6,8 @@
 import { getOrCreateAppFolder, uploadBackup, downloadBackup, saveSyncMetadata, getSyncMetadata } from '../google/drive';
 import { getValidAccessToken, clearTokens } from '../google/auth';
 import type { ExportData } from '@/lib/export/json';
+import type { Note } from '@/types';
+import type { NoteFolder } from '@/types/task';
 import { importFromJSON } from '@/lib/export/json';
 import { nanoid } from 'nanoid';
 
@@ -227,20 +229,54 @@ function mergeData(local: ExportData, remote: ExportData): ExportData {
     }
   });
 
+  // Merge standalone notes - prefer newer
+  const noteMap = new Map<string, Note>();
+  const localNotes = local.standaloneNotes || [];
+  const remoteNotes = remote.standaloneNotes || [];
+  for (const note of [...localNotes, ...remoteNotes]) {
+    const existing = noteMap.get(note.id);
+    if (!existing || note.updatedAt > existing.updatedAt) {
+      noteMap.set(note.id, note);
+    }
+  }
+
+  // Merge folders - prefer newer
+  const folderMap = new Map<string, NoteFolder>();
+  const localFolders = local.folders || [];
+  const remoteFolders = remote.folders || [];
+  for (const folder of [...localFolders, ...remoteFolders]) {
+    const existing = folderMap.get(folder.id);
+    if (!existing || folder.updatedAt > existing.updatedAt) {
+      folderMap.set(folder.id, folder);
+    }
+  }
+
+  // Merge note histories - combine both
+  const noteHistories: ExportData['noteHistories'] = {
+    ...(local.noteHistories || {}),
+    ...(remote.noteHistories || {}),
+  };
+
   return {
     version: local.version,
     exportDate: Date.now(),
     workspaces: Array.from(workspaceMap.values()),
     tasks: Array.from(taskMap.values()),
+    standaloneNotes: Array.from(noteMap.values()),
+    folders: Array.from(folderMap.values()),
     templates: {
       tasks: Array.from(taskTemplateMap.values()),
       notes: Array.from(noteTemplateMap.values()),
     },
     images: Array.from(imageMap.values()),
+    noteHistories: noteHistories,
     metadata: {
       totalTasks: taskMap.size,
       totalWorkspaces: workspaceMap.size,
       totalTemplates: taskTemplateMap.size + noteTemplateMap.size,
+      totalNotes: noteMap.size,
+      totalFolders: folderMap.size,
+      totalImages: imageMap.size,
     },
   };
 }

@@ -33,41 +33,25 @@ export interface ExportData {
 }
 
 /**
- * Export data to JSON string
- * @deprecated Use collectAllData() from dataCollector.ts instead for complete data collection
+ * Export ExportData to JSON string
+ * Use collectAllData() from dataCollector.ts to get the ExportData object first
  */
-export function exportToJSON(
-  workspaces: Workspace[],
-  tasks: Task[],
-  taskTemplates: TaskTemplate[],
-  noteTemplates: NoteTemplate[],
-  images: StoredImage[],
-  standaloneNotes?: Note[],
-  folders?: NoteFolder[]
-): string {
-  const exportData: ExportData = {
-    version: '1.0.0',
+export function exportToJSON(exportData: ExportData): string {
+  // Ensure metadata is up to date
+  const dataWithMetadata: ExportData = {
+    ...exportData,
     exportDate: Date.now(),
-    workspaces,
-    tasks,
-    standaloneNotes,
-    folders,
-    templates: {
-      tasks: taskTemplates,
-      notes: noteTemplates,
-    },
-    images,
     metadata: {
-      totalTasks: tasks.length,
-      totalWorkspaces: workspaces.length,
-      totalTemplates: taskTemplates.length + noteTemplates.length,
-      totalNotes: standaloneNotes?.length,
-      totalFolders: folders?.length,
-      totalImages: images.length,
+      totalTasks: exportData.tasks.length,
+      totalWorkspaces: exportData.workspaces.length,
+      totalTemplates: (exportData.templates.tasks?.length || 0) + (exportData.templates.notes?.length || 0),
+      totalNotes: exportData.standaloneNotes?.length,
+      totalFolders: exportData.folders?.length,
+      totalImages: exportData.images.length,
     },
   };
 
-  return JSON.stringify(exportData, null, 2);
+  return JSON.stringify(dataWithMetadata, null, 2);
 }
 
 export function importFromJSON(jsonString: string): ExportData | null {
