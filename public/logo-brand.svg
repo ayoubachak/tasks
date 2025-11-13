@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 200" fill="none">
+  <!-- Logo with text - for headers, branding -->
+  <g>
+    <!-- Checkmark square -->
+    <rect x="20" y="20" width="160" height="160" rx="24" ry="24" 
+          fill="none" 
+          stroke="currentColor" 
+          stroke-width="12" 
+          stroke-linecap="round" 
+          stroke-linejoin="round"/>
+    
+    <!-- Checkmark -->
+    <path d="M60 100 L100 140 L160 60" 
+          fill="none" 
+          stroke="currentColor" 
+          stroke-width="16" 
+          stroke-linecap="round" 
+          stroke-linejoin="round"/>
+    
+    <!-- Text -->
+    <text x="220" y="120" 
+          font-family="system-ui, -apple-system, sans-serif" 
+          font-size="72" 
+          font-weight="600" 
+          fill="currentColor">
+      Tasks
+    </text>
+  </g>
+</svg>
+

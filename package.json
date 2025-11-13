@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:gh-pages": "GITHUB_PAGES=true npm run build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -26,6 +27,7 @@
     "@radix-ui/react-slot": "^1.2.4",
     "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-tooltip": "^1.2.8",
+    "@react-oauth/google": "^0.12.2",
     "@tailwindcss/typography": "^0.5.19",
     "@tailwindcss/vite": "^4.1.17",
     "@types/react-syntax-highlighter": "^15.5.13",
@@ -34,6 +36,7 @@
     "cmdk": "^1.1.1",
     "date-fns": "^4.1.0",
     "extend": "^3.0.2",
+    "googleapis": "^166.0.0",
     "lucide-react": "^0.553.0",
     "nanoid": "^5.1.6",
     "react": "^19.2.0",

@@ -22,19 +22,19 @@ export function NoteHistory({ taskId, noteId, open, onClose, onRestore }: NoteHi
   const task = getTask(taskId);
   const note = task?.notes.find((n) => n.id === noteId);
   const [selectedVersion, setSelectedVersion] = useState<number | null>(null);
-  
+
   // Get history from store
   const historyVersions = note ? getHistory(noteId) : [];
   
   // Combine current note with history
   const allVersions = note
     ? [
-        {
-          version: note.version,
-          content: note.content,
-          updatedAt: note.updatedAt,
-          isCurrent: true,
-        },
+    {
+      version: note.version,
+      content: note.content,
+      updatedAt: note.updatedAt,
+      isCurrent: true,
+    },
         ...historyVersions.filter((v) => v.version !== note.version),
       ].sort((a, b) => b.version - a.version)
     : [];
@@ -57,7 +57,7 @@ export function NoteHistory({ taskId, noteId, open, onClose, onRestore }: NoteHi
       updateNote(noteId, versionToRestore.content, undefined, taskId);
       onClose();
       if (onRestore) {
-        onRestore(selectedVersion);
+      onRestore(selectedVersion);
       }
     }
   };
@@ -89,29 +89,29 @@ export function NoteHistory({ taskId, noteId, open, onClose, onRestore }: NoteHi
                   </div>
                 ) : (
                   allVersions.map((v) => (
-                    <button
-                      key={v.version}
-                      onClick={() => setSelectedVersion(v.version)}
-                      className={`w-full text-left p-3 rounded-md border transition-colors ${
-                        selectedVersion === v.version
-                          ? 'bg-primary text-primary-foreground border-primary'
-                          : 'hover:bg-accent'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="font-medium text-sm">
-                            Version {v.version}
-                            {v.isCurrent && (
-                              <span className="ml-2 text-xs opacity-75">(Current)</span>
-                            )}
-                          </div>
-                          <div className="text-xs opacity-75 mt-1">
-                            {format(v.updatedAt, 'MMM d, yyyy HH:mm')}
-                          </div>
+                  <button
+                    key={v.version}
+                    onClick={() => setSelectedVersion(v.version)}
+                    className={`w-full text-left p-3 rounded-md border transition-colors ${
+                      selectedVersion === v.version
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'hover:bg-accent'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-medium text-sm">
+                          Version {v.version}
+                          {v.isCurrent && (
+                            <span className="ml-2 text-xs opacity-75">(Current)</span>
+                          )}
+                        </div>
+                        <div className="text-xs opacity-75 mt-1">
+                          {format(v.updatedAt, 'MMM d, yyyy HH:mm')}
                         </div>
                       </div>
-                    </button>
+                    </div>
+                  </button>
                   ))
                 )}
               </div>
@@ -137,9 +137,9 @@ export function NoteHistory({ taskId, noteId, open, onClose, onRestore }: NoteHi
               <div className="p-4">
                 {selectedVersion !== null ? (
                   <>
-                    <MarkdownViewer
+                  <MarkdownViewer
                       content={allVersions.find((v) => v.version === selectedVersion)?.content || ''}
-                    />
+                  />
                     {selectedVersion !== note.version && (
                       <div className="mt-4 p-3 bg-muted rounded-md text-sm text-muted-foreground">
                         This is an older version. Click "Restore" to make it the current version.

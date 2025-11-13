@@ -138,7 +138,7 @@ export const useTaskStore = create<TaskState>()(
           // Standalone notes are unaffected
           
           return {
-            tasks: state.tasks.filter((task) => task.id !== id),
+          tasks: state.tasks.filter((task) => task.id !== id),
           };
         });
       },
@@ -351,16 +351,16 @@ export const useTaskStore = create<TaskState>()(
           if (taskId) {
             // Add to task
             return {
-              tasks: state.tasks.map((task) => {
-                if (task.id === taskId) {
-                  return {
-                    ...task,
-                    notes: [...task.notes, note],
-                    updatedAt: Date.now(),
-                  };
-                }
-                return task;
-              }),
+          tasks: state.tasks.map((task) => {
+            if (task.id === taskId) {
+              return {
+                ...task,
+                notes: [...task.notes, note],
+                updatedAt: Date.now(),
+              };
+            }
+            return task;
+          }),
             };
           } else {
             // Add as standalone note
@@ -461,16 +461,16 @@ export const useTaskStore = create<TaskState>()(
           if (taskId) {
             // Delete from specific task
             return {
-              tasks: state.tasks.map((task) => {
-                if (task.id === taskId) {
-                  return {
-                    ...task,
-                    notes: task.notes.filter((note) => note.id !== noteId),
-                    updatedAt: Date.now(),
-                  };
-                }
-                return task;
-              }),
+          tasks: state.tasks.map((task) => {
+            if (task.id === taskId) {
+              return {
+                ...task,
+                notes: task.notes.filter((note) => note.id !== noteId),
+                updatedAt: Date.now(),
+              };
+            }
+            return task;
+          }),
             };
           } else {
             // Try to find and delete from tasks first
@@ -505,25 +505,25 @@ export const useTaskStore = create<TaskState>()(
           if (taskId) {
             // Pin/unpin in specific task
             return {
-              tasks: state.tasks.map((task) => {
-                if (task.id === taskId) {
-                  const notes = task.notes.map((note) =>
-                    note.id === noteId ? { ...note, pinned } : note
-                  );
-                  // Sort: pinned notes first
-                  notes.sort((a, b) => {
-                    if (a.pinned && !b.pinned) return -1;
-                    if (!a.pinned && b.pinned) return 1;
-                    return b.createdAt - a.createdAt;
-                  });
-                  return {
-                    ...task,
-                    notes,
-                    updatedAt: Date.now(),
-                  };
-                }
-                return task;
-              }),
+          tasks: state.tasks.map((task) => {
+            if (task.id === taskId) {
+              const notes = task.notes.map((note) =>
+                note.id === noteId ? { ...note, pinned } : note
+              );
+              // Sort: pinned notes first
+              notes.sort((a, b) => {
+                if (a.pinned && !b.pinned) return -1;
+                if (!a.pinned && b.pinned) return 1;
+                return b.createdAt - a.createdAt;
+              });
+              return {
+                ...task,
+                notes,
+                updatedAt: Date.now(),
+              };
+            }
+            return task;
+          }),
             };
           } else {
             // Try to find in tasks first

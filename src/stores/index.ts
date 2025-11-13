@@ -9,4 +9,5 @@ export * from './selectionStore';
 export * from './backupStore';
 export * from './noteHistoryStore';
 export * from './noteFolderStore';
+export * from './syncStore';
 

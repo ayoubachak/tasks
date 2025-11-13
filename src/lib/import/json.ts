@@ -3,6 +3,7 @@ import { useWorkspaceStore } from '@/stores/workspaceStore';
 import { useTaskStore } from '@/stores/taskStore';
 import { useTemplateStore } from '@/stores/templateStore';
 import { useImageStore } from '@/stores/imageStore';
+import { useNoteFolderStore } from '@/stores/noteFolderStore';
 import { getAvailableStorage } from '@/lib/storage/storageUtils';
 import { nanoid } from 'nanoid';
 
@@ -41,6 +42,7 @@ export async function importFromJSONData(
     const taskStore = useTaskStore.getState();
     const templateStore = useTemplateStore.getState();
     const imageStore = useImageStore.getState();
+    const noteFolderStore = useNoteFolderStore.getState();
 
     // Import workspaces
     if (data.workspaces) {
@@ -268,6 +270,57 @@ export async function importFromJSONData(
       }
     }
 
+    // Import standalone notes
+    if (data.standaloneNotes) {
+      for (const note of data.standaloneNotes) {
+        try {
+          // Find or create workspace for this note
+          const workspaces = workspaceStore.workspaces;
+          let targetWorkspace = workspaces.find((w) => w.id === note.workspaceId);
+          
+          if (!targetWorkspace) {
+            targetWorkspace = workspaceStore.createWorkspace('Imported Workspace', '#3b82f6');
+          }
+
+          taskStore.addNote(
+            note.workspaceId,
+            null, // Standalone note, not linked to task
+            note.content,
+            note.title,
+            note.images,
+            note.folderId
+          );
+        } catch (error) {
+          result.errors.push(`Failed to import standalone note: ${error}`);
+        }
+      }
+    }
+
+    // Import note folders
+    if (data.folders) {
+      for (const folder of data.folders) {
+        try {
+          // Find or create workspace for this folder
+          const workspaces = workspaceStore.workspaces;
+          let targetWorkspace = workspaces.find((w) => w.id === folder.workspaceId);
+          
+          if (!targetWorkspace) {
+            targetWorkspace = workspaceStore.createWorkspace('Imported Workspace', '#3b82f6');
+          }
+
+          noteFolderStore.createFolder(
+            folder.workspaceId,
+            folder.name,
+            folder.parentFolderId,
+            folder.color,
+            folder.icon
+          );
+        } catch (error) {
+          result.errors.push(`Failed to import folder ${folder.name}: ${error}`);
+        }
+      }
+    }
+
     if (result.errors.length > 0) {
       result.success = false;
     }
@@ -277,5 +330,42 @@ export async function importFromJSONData(
   }
 
   return result;
+}
+
+/**
+ * Replace all data with backup data (clears existing and imports)
+ */
+export async function replaceAllDataWithBackup(data: ExportData): Promise<ImportResult> {
+  const workspaceStore = useWorkspaceStore.getState();
+  const taskStore = useTaskStore.getState();
+  const templateStore = useTemplateStore.getState();
+  const imageStore = useImageStore.getState();
+  const noteFolderStore = useNoteFolderStore.getState();
+
+  // Clear all existing data
+  // Delete all workspaces (this will also delete all tasks and notes)
+  const workspaces = workspaceStore.workspaces;
+  workspaces.forEach((ws) => workspaceStore.deleteWorkspace(ws.id));
+
+  // Clear templates
+  const taskTemplates = templateStore.taskTemplates;
+  const noteTemplates = templateStore.noteTemplates;
+  taskTemplates.forEach((t) => templateStore.deleteTaskTemplate(t.id));
+  noteTemplates.forEach((t) => templateStore.deleteNoteTemplate(t.id));
+
+  // Clear images
+  const allImageIds = imageStore.getAllImageIds();
+  allImageIds.forEach((id) => imageStore.deleteImage(id));
+
+  // Clear note folders
+  const folders = noteFolderStore.folders;
+  folders.forEach((f) => noteFolderStore.deleteFolder(f.id));
+
+  // Now import the backup data
+  return await importFromJSONData(data, {
+    mergeWorkspaces: false,
+    mergeTasks: false,
+    skipDuplicates: false,
+  });
 }
 

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <!-- Background circle (optional, can be removed if you want transparent) -->
+  <circle cx="256" cy="256" r="240" fill="hsl(var(--primary))" opacity="0.1"/>
+  
+  <!-- Checkmark square with rounded corners -->
+  <rect x="96" y="96" width="320" height="320" rx="48" ry="48" 
+        fill="none" 
+        stroke="hsl(var(--primary))" 
+        stroke-width="32" 
+        stroke-linecap="round" 
+        stroke-linejoin="round"/>
+  
+  <!-- Checkmark -->
+  <path d="M192 256 L240 304 L320 224" 
+        fill="none" 
+        stroke="hsl(var(--primary))" 
+        stroke-width="40" 
+        stroke-linecap="round" 
+        stroke-linejoin="round"/>
+</svg>
+

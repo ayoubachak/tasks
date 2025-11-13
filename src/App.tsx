@@ -9,7 +9,8 @@ import { CommandPalette } from './components/shared/CommandPalette';
 import { ErrorBoundary } from './components/shared/ErrorBoundary';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
 import { storage } from './lib/storage/localStorage';
-import { useWorkspaceStore, useUIStore } from './stores';
+import { useWorkspaceStore, useUIStore, useSyncStore } from './stores';
+import { exchangeCodeForTokens } from './services/google/auth';
 import { CheckSquare, StickyNote } from 'lucide-react';
 
 function App() {
@@ -19,6 +20,8 @@ function App() {
   const [activeTab, setActiveTab] = useState<'tasks' | 'notes'>('tasks');
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  const { checkConnection, setConnected } = useSyncStore();
+
   useEffect(() => {
     // Initialize storage
     storage.initialize();
@@ -27,7 +30,10 @@ function App() {
     if (!activeWorkspaceId && workspaces.length > 0) {
       setActiveWorkspace(workspaces[0].id);
     }
-  }, [activeWorkspaceId, workspaces.length, setActiveWorkspace]);
+
+    // Check existing connection (popup flow doesn't need URL parsing)
+    checkConnection();
+  }, [activeWorkspaceId, workspaces.length, setActiveWorkspace, checkConnection, setConnected]);
 
   const handleNewTask = () => {
     // This will be handled by TaskList component

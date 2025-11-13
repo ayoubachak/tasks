@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Authenticating...</title>
+</head>
+<body>
+  <div style="display: flex; align-items: center; justify-content: center; height: 100vh; font-family: system-ui;">
+    <div style="text-align: center;">
+      <p>Completing authentication...</p>
+      <div style="margin-top: 20px; font-size: 14px; color: #666;">You can close this window.</div>
+    </div>
+  </div>
+  <script>
+    // Extract OAuth parameters from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    const state = urlParams.get('state');
+    const error = urlParams.get('error');
+
+    // Send message to parent window (the main app)
+    if (window.opener) {
+      if (error) {
+        window.opener.postMessage({
+          type: 'oauth-error',
+          error: error
+        }, window.location.origin);
+        // Wait a bit before closing to ensure message is received
+        setTimeout(() => window.close(), 500);
+      } else if (code && state) {
+        window.opener.postMessage({
+          type: 'oauth-callback',
+          code: code,
+          state: state
+        }, window.location.origin);
+        // Don't close immediately - let the parent handle it
+        // The parent will close after processing the message
+      } else {
+        // No code/state and no error - something went wrong
+        window.opener.postMessage({
+          type: 'oauth-error',
+          error: 'No authorization code received'
+        }, window.location.origin);
+        setTimeout(() => window.close(), 500);
+      }
+    } else {
+      // If not in popup, redirect to main app (fallback for direct access)
+      const baseUrl = window.location.origin + (window.location.pathname.includes('/tasks/') ? '/tasks' : '');
+      if (code && state) {
+        window.location.href = `${baseUrl}/auth/google/callback?code=${code}&state=${state}`;
+      } else {
+        window.location.href = baseUrl;
+      }
+    }
+  </script>
+</body>
+</html>
+

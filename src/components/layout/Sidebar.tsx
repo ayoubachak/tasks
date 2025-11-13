@@ -110,15 +110,15 @@ export function Sidebar({ collapsed = false, onToggleCollapse }: SidebarProps) {
         {!collapsed && <h2 className="font-semibold">Workspaces</h2>}
         <div className="flex items-center gap-1">
           {!collapsed && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleCreateWorkspace}
-              title="Create workspace"
-              aria-label="Create new workspace"
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleCreateWorkspace}
+          title="Create workspace"
+          aria-label="Create new workspace"
+        >
+          <Plus className="h-4 w-4" />
+        </Button>
           )}
           <Button
             variant={collapsed ? "default" : "ghost"}
@@ -171,10 +171,10 @@ export function Sidebar({ collapsed = false, onToggleCollapse }: SidebarProps) {
                               ? 'bg-primary text-primary-foreground'
                               : 'hover:bg-accent'
                           )}
-                          aria-label={`Switch to ${workspace.name} workspace`}
-                          aria-pressed={activeWorkspaceId === workspace.id}
-                          role="tab"
-                        >
+                  aria-label={`Switch to ${workspace.name} workspace`}
+                  aria-pressed={activeWorkspaceId === workspace.id}
+                  role="tab"
+                >
                           <div
                             className="h-4 w-4 rounded-full"
                             style={{ backgroundColor: workspace.color }}
@@ -184,10 +184,10 @@ export function Sidebar({ collapsed = false, onToggleCollapse }: SidebarProps) {
                       <PopoverContent className="w-48 p-2" side="right">
                         <div className="space-y-1">
                           <div className="flex items-center gap-2 px-2 py-1.5">
-                            <div
-                              className="h-3 w-3 rounded-full"
-                              style={{ backgroundColor: workspace.color }}
-                            />
+                  <div
+                    className="h-3 w-3 rounded-full"
+                    style={{ backgroundColor: workspace.color }}
+                  />
                             <span className="font-medium text-sm">{workspace.name}</span>
                           </div>
                           <Separator />
@@ -285,8 +285,8 @@ export function Sidebar({ collapsed = false, onToggleCollapse }: SidebarProps) {
                           role="tab"
                         >
                           <Folder className="h-4 w-4 flex-shrink-0" />
-                          <span className="flex-1 truncate">{workspace.name}</span>
-                        </button>
+                  <span className="flex-1 truncate">{workspace.name}</span>
+                </button>
                       </div>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>

@@ -593,13 +593,13 @@ export function TaskEditor({ taskId, workspaceId, onClose }: TaskEditorProps) {
               </div>
 
               {/* Tags */}
-              <div className="space-y-2">
-                <Label>Tags</Label>
-                <TagPicker
-                  tags={taskTags}
-                  availableTags={allTags}
-                  onChange={setTaskTags}
-                />
+                <div className="space-y-2">
+                  <Label>Tags</Label>
+                  <TagPicker
+                    tags={taskTags}
+                    availableTags={allTags}
+                    onChange={setTaskTags}
+                  />
               </div>
 
               {/* Recurrence */}
@@ -648,9 +648,9 @@ export function TaskEditor({ taskId, workspaceId, onClose }: TaskEditorProps) {
                             (note) => note.taskId === currentTask.id
                           );
                           return linkedNotes.length > 0 && (
-                            <span className="text-xs text-muted-foreground ml-2">
+                          <span className="text-xs text-muted-foreground ml-2">
                               ({linkedNotes.length})
-                            </span>
+                          </span>
                           );
                         })()}
                       </div>
@@ -678,12 +678,12 @@ export function TaskEditor({ taskId, workspaceId, onClose }: TaskEditorProps) {
                           
                           if (linkedNotes.length === 0) {
                             return (
-                              <p className="text-sm text-muted-foreground text-center py-4">No notes yet</p>
+                          <p className="text-sm text-muted-foreground text-center py-4">No notes yet</p>
                             );
                           }
                           
                           return (
-                            <div className="space-y-2 max-h-64 overflow-y-auto">
+                          <div className="space-y-2 max-h-64 overflow-y-auto">
                               {linkedNotes.map((note) => (
                               <div
                                 key={note.id}
@@ -708,17 +708,17 @@ export function TaskEditor({ taskId, workspaceId, onClose }: TaskEditorProps) {
                                   />
                                 </div>
                                 <div className="flex items-center gap-1 ml-2">
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      openNoteEditor(currentTask.id, note.id, workspaceId);
-                                    }}
-                                  >
-                                    Edit
-                                  </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openNoteEditor(currentTask.id, note.id, workspaceId);
+                                  }}
+                                >
+                                  Edit
+                                </Button>
                                   <Button
                                     type="button"
                                     variant="ghost"
@@ -735,8 +735,8 @@ export function TaskEditor({ taskId, workspaceId, onClose }: TaskEditorProps) {
                                   </Button>
                                 </div>
                               </div>
-                              ))}
-                            </div>
+                            ))}
+                          </div>
                           );
                         })()}
                       </div>

@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" fill="none">
+  <!-- Background with gradient -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:hsl(var(--primary));stop-opacity:0.15" />
+      <stop offset="100%" style="stop-color:hsl(var(--primary));stop-opacity:0.05" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="512" cy="512" r="480" fill="url(#bgGradient)"/>
+  
+  <!-- Checkmark square with rounded corners - larger and bolder -->
+  <rect x="192" y="192" width="640" height="640" rx="96" ry="96" 
+        fill="none" 
+        stroke="hsl(var(--primary))" 
+        stroke-width="64" 
+        stroke-linecap="round" 
+        stroke-linejoin="round"/>
+  
+  <!-- Checkmark - bold and prominent -->
+  <path d="M384 512 L512 640 L768 384" 
+        fill="none" 
+        stroke="hsl(var(--primary))" 
+        stroke-width="80" 
+        stroke-linecap="round" 
+        stroke-linejoin="round"/>
+</svg>
+

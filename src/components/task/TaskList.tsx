@@ -199,9 +199,9 @@ export function TaskList() {
             <SearchBar />
           </div>
           <div className="flex items-center gap-2">
-          <ViewSwitcher />
+            <ViewSwitcher />
           <GroupByMenu />
-          <SortMenu />
+            <SortMenu />
           </div>
         </div>
         <FilterBar />
