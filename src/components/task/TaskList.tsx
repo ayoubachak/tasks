@@ -135,11 +135,11 @@ export function TaskList() {
         const useVirtualization = filteredTasks.length >= 50;
         
         return (
-          <ScrollArea className="flex-1">
+          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden -mx-3 md:mx-0 px-3 md:px-0">
             {filteredTasks.length === 0 ? (
-              <div className="flex h-full items-center justify-center">
-                <div className="text-center">
-                  <p className="text-lg font-medium text-muted-foreground">
+              <div className="flex h-full min-h-[200px] items-center justify-center">
+                <div className="text-center px-4">
+                  <p className="text-base md:text-lg font-medium text-muted-foreground">
                     No tasks found
                   </p>
                   <p className="mt-2 text-sm text-muted-foreground">
@@ -156,7 +156,7 @@ export function TaskList() {
                 className="h-full"
               />
             ) : (
-              <div className="space-y-2 p-4">
+              <div className="space-y-2 py-2">
                 {filteredTasks.map((task) => (
                   <TaskItem
                     key={task.id}
@@ -166,13 +166,13 @@ export function TaskList() {
                 ))}
               </div>
             )}
-          </ScrollArea>
+          </div>
         );
     }
   };
 
   return (
-    <div className="flex h-full flex-col min-h-0 overflow-hidden">
+    <div className="flex flex-col h-full min-h-0">
       {/* Header */}
       <div className="mb-3 md:mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 flex-shrink-0">
         <div>

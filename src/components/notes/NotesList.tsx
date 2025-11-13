@@ -115,7 +115,7 @@ export function NotesList() {
   }
 
   return (
-    <div className="flex h-full gap-2 md:gap-4 min-h-0 overflow-hidden">
+    <div className="flex gap-2 md:gap-4 h-full min-h-0">
       {/* Folder Sidebar - Hidden on mobile, shown via button */}
       <div className="hidden md:block w-64 flex-shrink-0">
         <FolderTree
@@ -127,7 +127,7 @@ export function NotesList() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 min-h-0">
         {/* Header */}
         <div className="mb-3 md:mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 flex-shrink-0">
           <div>

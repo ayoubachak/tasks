@@ -17,7 +17,6 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { TaskItem } from '@/components/task/TaskItem';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { useTaskStore, useSelectionStore } from '@/stores';
 import type { Task } from '@/types';
 import { cn } from '@/lib/utils';
@@ -107,11 +106,11 @@ export function SortableListView({ tasks, onEditTask }: SortableListViewProps) {
       collisionDetection={closestCenter}
       onDragEnd={handleDragEnd}
     >
-      <ScrollArea className="flex-1">
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden -mx-3 md:mx-0 px-3 md:px-0">
         {tasks.length === 0 ? (
-          <div className="flex h-full items-center justify-center">
-            <div className="text-center">
-              <p className="text-lg font-medium text-muted-foreground">
+          <div className="flex h-full min-h-[200px] items-center justify-center">
+            <div className="text-center px-4">
+              <p className="text-base md:text-lg font-medium text-muted-foreground">
                 No tasks found
               </p>
               <p className="mt-2 text-sm text-muted-foreground">
@@ -121,7 +120,7 @@ export function SortableListView({ tasks, onEditTask }: SortableListViewProps) {
           </div>
         ) : (
           <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
-            <div className="space-y-2">
+            <div className="space-y-2 py-2">
               {tasks.map((task) => (
                 <SortableTaskItem
                   key={task.id}
@@ -132,7 +131,7 @@ export function SortableListView({ tasks, onEditTask }: SortableListViewProps) {
             </div>
           </SortableContext>
         )}
-      </ScrollArea>
+      </div>
     </DndContext>
   );
 }

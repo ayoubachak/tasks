@@ -32,7 +32,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
       <div className="flex flex-1 flex-col overflow-hidden min-w-0">
         <Header onMobileMenuToggle={() => setMobileMenuOpen(!mobileMenuOpen)} />
-        <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-4 md:p-6" role="main">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 p-3 sm:p-4 md:p-6" role="main">
           {children}
         </main>
       </div>
