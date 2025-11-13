@@ -23,7 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { RefreshCw, Loader2, ChevronDown, GitMerge, Upload, Download, Cloud, CloudOff, CheckCircle2, XCircle, FolderOpen } from 'lucide-react';
+import { Loader2, ChevronDown, GitMerge, Upload, Download, Cloud, CloudOff, CheckCircle2, XCircle, FolderOpen } from 'lucide-react';
 import { toast } from '@/lib/toast';
 import { format } from 'date-fns';
 import { getFolderUrl } from '@/services/google/drive';
