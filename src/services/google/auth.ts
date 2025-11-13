@@ -119,12 +119,21 @@ export async function authenticateWithPopup(): Promise<GoogleAuthTokens> {
 
     // Listen for messages from popup (when it redirects to callback)
     const messageListener = async (event: MessageEvent) => {
+      console.log('Message received from popup:', {
+        origin: event.origin,
+        expectedOrigin: window.location.origin,
+        type: event.data?.type,
+        matches: event.origin === window.location.origin
+      });
+      
       // Security: verify origin
       if (event.origin !== window.location.origin) {
+        console.warn('Message origin mismatch, ignoring:', event.origin);
         return;
       }
 
       if (event.data.type === 'oauth-callback') {
+        console.log('Processing oauth-callback message...');
         messageReceived = true;
         if (checkClosedInterval) {
           clearInterval(checkClosedInterval);

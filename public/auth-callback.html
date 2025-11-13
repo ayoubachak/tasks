@@ -19,38 +19,80 @@
     const state = urlParams.get('state');
     const error = urlParams.get('error');
 
+    // Determine the target origin for postMessage
+    // Use the same origin as the current page (which should match the opener)
+    const targetOrigin = window.location.origin;
+    
+    console.log('OAuth callback received:', { code: !!code, state: !!state, error: !!error });
+    console.log('Window opener:', window.opener ? 'exists' : 'null');
+    console.log('Target origin:', targetOrigin);
+
     // Send message to parent window (the main app)
-    if (window.opener) {
-      if (error) {
-        window.opener.postMessage({
-          type: 'oauth-error',
-          error: error
-        }, window.location.origin);
-        // Wait a bit before closing to ensure message is received
-        setTimeout(() => window.close(), 500);
-      } else if (code && state) {
-        window.opener.postMessage({
-          type: 'oauth-callback',
-          code: code,
-          state: state
-        }, window.location.origin);
-        // Don't close immediately - let the parent handle it
-        // The parent will close after processing the message
-      } else {
-        // No code/state and no error - something went wrong
-        window.opener.postMessage({
-          type: 'oauth-error',
-          error: 'No authorization code received'
-        }, window.location.origin);
-        setTimeout(() => window.close(), 500);
+    if (window.opener && !window.opener.closed) {
+      console.log('Sending message to opener...');
+      try {
+        if (error) {
+          window.opener.postMessage({
+            type: 'oauth-error',
+            error: error
+          }, targetOrigin);
+          // Wait a bit before closing to ensure message is received
+          setTimeout(() => {
+            if (!window.closed) window.close();
+          }, 500);
+        } else if (code && state) {
+          console.log('Posting oauth-callback message...');
+          window.opener.postMessage({
+            type: 'oauth-callback',
+            code: code,
+            state: state
+          }, targetOrigin);
+          console.log('Message sent, closing popup in 300ms...');
+          // Wait a moment to ensure message is received, then close
+          setTimeout(() => {
+            if (!window.closed) {
+              console.log('Closing popup window...');
+              window.close();
+            }
+          }, 300);
+        } else {
+          // No code/state and no error - something went wrong
+          window.opener.postMessage({
+            type: 'oauth-error',
+            error: 'No authorization code received'
+          }, targetOrigin);
+          setTimeout(() => {
+            if (!window.closed) window.close();
+          }, 500);
+        }
+      } catch (e) {
+        console.error('Error sending message to opener:', e);
+        // If postMessage fails, try to redirect the opener
+        try {
+          const basePath = window.location.pathname.includes('/tasks/') ? '/tasks' : '';
+          if (code && state) {
+            window.opener.location.href = `${targetOrigin}${basePath}/?oauth_callback=1&code=${code}&state=${state}`;
+          }
+        } catch (e2) {
+          console.error('Error redirecting opener:', e2);
+        }
+        setTimeout(() => {
+          if (!window.closed) window.close();
+        }, 1000);
       }
     } else {
-      // If not in popup, redirect to main app (fallback for direct access)
-      const baseUrl = window.location.origin + (window.location.pathname.includes('/tasks/') ? '/tasks' : '');
+      // If not in popup or opener is closed, redirect to main app (fallback for direct access)
+      const basePath = window.location.pathname.includes('/tasks/') ? '/tasks' : '';
       if (code && state) {
-        window.location.href = `${baseUrl}/auth/google/callback?code=${code}&state=${state}`;
+        // Store in sessionStorage and redirect
+        sessionStorage.setItem('oauth_callback_code', code);
+        sessionStorage.setItem('oauth_callback_state', state);
+        window.location.href = `${targetOrigin}${basePath}/?oauth_callback=1`;
+      } else if (error) {
+        sessionStorage.setItem('oauth_callback_error', error);
+        window.location.href = `${targetOrigin}${basePath}/?oauth_error=1`;
       } else {
-        window.location.href = baseUrl;
+        window.location.href = `${targetOrigin}${basePath}/`;
       }
     }
   </script>
