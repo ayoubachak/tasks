@@ -57,12 +57,10 @@ export function DescriptionPreview({
 
   return (
     <div className={`text-sm text-muted-foreground ${lineClampClass} ${className || ''}`}>
-      <div className="prose prose-sm dark:prose-invert max-w-none">
-        <MarkdownViewer 
-          content={previewContent} 
-          className="prose-sm"
-        />
-      </div>
+      <MarkdownViewer 
+        content={previewContent} 
+        className="markdown-preview"
+      />
     </div>
   );
 }
