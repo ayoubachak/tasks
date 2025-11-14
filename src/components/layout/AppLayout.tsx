@@ -4,9 +4,12 @@ import { Sidebar } from './Sidebar';
 
 interface AppLayoutProps {
   children: ReactNode;
+  showAllView?: boolean;
+  onToggleAllView?: () => void;
+  onExitAllView?: () => void;
 }
 
-export function AppLayout({ children }: AppLayoutProps) {
+export function AppLayout({ children, showAllView, onToggleAllView, onExitAllView }: AppLayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -16,7 +19,10 @@ export function AppLayout({ children }: AppLayoutProps) {
       <div className="hidden md:block">
         <Sidebar 
           collapsed={sidebarCollapsed} 
-          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)} 
+          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+          showAllView={showAllView}
+          onToggleAllView={onToggleAllView}
+          onExitAllView={onExitAllView}
         />
       </div>
       
@@ -26,7 +32,10 @@ export function AppLayout({ children }: AppLayoutProps) {
           collapsed={false}
           mobileOpen={mobileMenuOpen}
           onMobileClose={() => setMobileMenuOpen(false)}
-          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)} 
+          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+          showAllView={showAllView}
+          onToggleAllView={onToggleAllView}
+          onExitAllView={onExitAllView}
         />
       </div>
 

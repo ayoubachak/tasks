@@ -4,6 +4,7 @@ import { TaskList } from './components/task/TaskList';
 import { NotesList } from './components/notes/NotesList';
 import { DescriptionEditorView } from './components/views/DescriptionEditorView';
 import { NoteEditorView } from './components/views/NoteEditorView';
+import { AllView } from './components/views/AllView';
 import { KeyboardShortcuts } from './components/shared/KeyboardShortcuts';
 import { CommandPalette } from './components/shared/CommandPalette';
 import { ErrorBoundary } from './components/shared/ErrorBoundary';
@@ -20,19 +21,20 @@ function App() {
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'tasks' | 'notes'>('tasks');
   const { checkConnection, setConnected } = useSyncStore();
+  const [showAllView, setShowAllView] = useState(false);
 
   useEffect(() => {
     // Initialize storage
     storage.initialize();
 
     // If no workspace is active but workspaces exist, select the first one
-    if (!activeWorkspaceId && workspaces.length > 0) {
+    if (!activeWorkspaceId && workspaces.length > 0 && !showAllView) {
       setActiveWorkspace(workspaces[0].id);
     }
 
     // Check existing connection (popup flow doesn't need URL parsing)
     checkConnection();
-  }, [activeWorkspaceId, workspaces.length, setActiveWorkspace, checkConnection, setConnected]);
+  }, [activeWorkspaceId, workspaces.length, setActiveWorkspace, checkConnection, setConnected, showAllView]);
 
   const handleNewTask = () => {
     // This will be handled by TaskList component
@@ -69,28 +71,36 @@ function App() {
           onNewTask={handleNewTask}
           onNavigateToTask={handleNavigateToTask}
         />
-        <AppLayout>
+        <AppLayout 
+          showAllView={showAllView} 
+          onToggleAllView={() => setShowAllView(!showAllView)}
+          onExitAllView={() => setShowAllView(false)}
+        >
         <ErrorBoundary>
-          <div className="flex flex-col min-h-full">
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'tasks' | 'notes')} className="flex flex-col flex-1 min-h-0">
-              <TabsList className="mb-3 md:mb-4 w-fit flex-shrink-0">
-                <TabsTrigger value="tasks" className="flex items-center gap-2 text-sm md:text-base">
-                  <CheckSquare className="h-4 w-4" />
-                  <span className="hidden sm:inline">Tasks</span>
-                </TabsTrigger>
-                <TabsTrigger value="notes" className="flex items-center gap-2 text-sm md:text-base">
-                  <StickyNote className="h-4 w-4" />
-                  <span className="hidden sm:inline">Notes</span>
-                </TabsTrigger>
-              </TabsList>
-              <TabsContent value="tasks" className="flex-1 mt-0 min-h-0">
-                <TaskList />
-              </TabsContent>
-              <TabsContent value="notes" className="flex-1 mt-0 min-h-0">
-                <NotesList />
-              </TabsContent>
-            </Tabs>
-          </div>
+          {showAllView ? (
+            <AllView />
+          ) : (
+            <div className="flex flex-col min-h-full">
+              <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'tasks' | 'notes')} className="flex flex-col flex-1 min-h-0">
+                <TabsList className="mb-3 md:mb-4 w-fit flex-shrink-0">
+                  <TabsTrigger value="tasks" className="flex items-center gap-2 text-sm md:text-base">
+                    <CheckSquare className="h-4 w-4" />
+                    <span className="hidden sm:inline">Tasks</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="notes" className="flex items-center gap-2 text-sm md:text-base">
+                    <StickyNote className="h-4 w-4" />
+                    <span className="hidden sm:inline">Notes</span>
+                  </TabsTrigger>
+                </TabsList>
+                <TabsContent value="tasks" className="flex-1 mt-0 min-h-0">
+                  <TaskList />
+                </TabsContent>
+                <TabsContent value="notes" className="flex-1 mt-0 min-h-0">
+                  <NotesList />
+                </TabsContent>
+              </Tabs>
+            </div>
+          )}
         </ErrorBoundary>
       </AppLayout>
       {currentView === 'description-editor' && (

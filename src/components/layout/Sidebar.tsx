@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useWorkspaceStore, useTaskStore } from '@/stores';
-import { Plus, Folder, MoreVertical, Edit, Trash2, Palette, ChevronLeft, ChevronRight, CheckSquare, Square, X } from 'lucide-react';
+import { Plus, Folder, MoreVertical, Edit, Trash2, Palette, ChevronLeft, ChevronRight, CheckSquare, Square, X, Layers } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
@@ -38,9 +38,12 @@ interface SidebarProps {
   onToggleCollapse?: () => void;
   mobileOpen?: boolean;
   onMobileClose?: () => void;
+  showAllView?: boolean;
+  onToggleAllView?: () => void;
+  onExitAllView?: () => void;
 }
 
-export function Sidebar({ collapsed = false, onToggleCollapse, mobileOpen = false, onMobileClose }: SidebarProps) {
+export function Sidebar({ collapsed = false, onToggleCollapse, mobileOpen = false, onMobileClose, showAllView = false, onToggleAllView, onExitAllView }: SidebarProps) {
   const { workspaces, activeWorkspaceId, setActiveWorkspace, updateWorkspace, deleteWorkspace, setActiveWorkspace: setActive } = useWorkspaceStore();
   const { getTasksByWorkspace, deleteTask } = useTaskStore();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -263,6 +266,27 @@ export function Sidebar({ collapsed = false, onToggleCollapse, mobileOpen = fals
       <Separator />
       <ScrollArea className="h-[calc(100vh-4rem)]">
         <div className={cn("p-2", collapsed && "px-1")}>
+          {/* All View Button */}
+          {onToggleAllView && (
+            <div
+              className={cn(
+                'group flex items-center gap-2 rounded-md text-left text-sm transition-smooth mb-2',
+                collapsed ? 'px-2 py-2 justify-center' : 'px-3 py-2',
+                showAllView
+                  ? 'bg-primary text-primary-foreground'
+                  : 'hover:bg-accent'
+              )}
+              onClick={() => {
+                if (!collapsed) {
+                  onToggleAllView();
+                  onMobileClose?.();
+                }
+              }}
+            >
+              <Layers className={cn("h-4 w-4 flex-shrink-0", collapsed && "mx-auto")} />
+              {!collapsed && <span className="flex-1">All Tasks & Notes</span>}
+            </div>
+          )}
           {!collapsed && workspaces.length === 0 ? (
             <div className="p-4 text-center text-sm text-muted-foreground">
               No workspaces yet. Create one to get started!
@@ -289,6 +313,7 @@ export function Sidebar({ collapsed = false, onToggleCollapse, mobileOpen = fals
                       handleToggleSelection(workspace.id);
                     } else if (!collapsed) {
                       setActiveWorkspace(workspace.id);
+                      onExitAllView?.(); // Exit All view when selecting a workspace
                       onMobileClose?.();
                     }
                   }}
