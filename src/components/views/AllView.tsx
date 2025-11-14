@@ -1,15 +1,12 @@
 import { useMemo, useState } from 'react';
 import { useTaskStore, useWorkspaceStore } from '@/stores';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CheckSquare, StickyNote, Folder } from 'lucide-react';
+import { CheckSquare, StickyNote } from 'lucide-react';
 import { TaskItem } from '@/components/task/TaskItem';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
-import { cn } from '@/lib/utils';
 import type { Task, Note } from '@/types';
 import { MarkdownViewer } from '@/components/notes/MarkdownViewer';
 import { format } from 'date-fns';
-import { Button } from '@/components/ui/button';
 import { SearchBar } from '@/components/filters/SearchBar';
 import { useViewStore } from '@/stores/viewStore';
 
@@ -26,7 +23,7 @@ interface NoteWithWorkspace extends Note {
 
 export function AllView() {
   const { workspaces } = useWorkspaceStore();
-  const { tasks, standaloneNotes, getAllNotes } = useTaskStore();
+  const { tasks, standaloneNotes } = useTaskStore();
   const { searchQuery } = useViewStore();
   const [activeTab, setActiveTab] = useState<'tasks' | 'notes'>('tasks');
 
@@ -183,7 +180,14 @@ export function AllView() {
                       </div>
                       <div className="space-y-2 pl-5">
                         {workspaceTasks.map((task) => (
-                          <TaskItem key={task.id} task={task} />
+                          <TaskItem 
+                            key={task.id} 
+                            task={task}
+                            onEdit={() => {
+                              // Dispatch event to open task editor
+                              window.dispatchEvent(new CustomEvent('edit-task', { detail: { taskId: task.id } }));
+                            }}
+                          />
                         ))}
                       </div>
                     </div>
